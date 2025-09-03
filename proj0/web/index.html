@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>CS180 Proj0 — Becoming Friends with Your Camera</title>
+
+    <!-- Inter (thin) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap"
+      rel="stylesheet"
+    />
+
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="container">
+        <h1 class="title">CS 180 Programming Project #0</h1>
+        <!-- <p class="kicker">
+          CS180: Intro to Computer Vision & Computational Photography
+        </p> -->
+        <h2 class="sub">Becoming Friends with Your Camera</h2>
+        <h3 class="due">
+          <span> Anirudh Kotamraju</span>
+        </h3>
+      </div>
+    </header>
+
+    <main class="container">
+      <!-- Part 1 -->
+      <section id="part1" class="section">
+        <h2>Part 1: Selfie — Wrong vs. Right</h2>
+        <div class="grid">
+          <figure>
+            <img src="images/part1_close.jpg" alt="" />
+            <figcaption>
+              Close &amp; wide — perspective distortion visible.
+            </figcaption>
+          </figure>
+          <figure>
+            <img src="images/part1_far.jpg" alt="" />
+            <figcaption>
+              Stepped back &amp; zoomed — more natural proportions.
+            </figcaption>
+          </figure>
+        </div>
+      </section>
+
+      <!-- Part 2 -->
+      <section id="part2" class="section">
+        <h2>Part 2: Architectural Perspective Compression</h2>
+        <div class="grid">
+          <figure>
+            <img src="images/part2_zoomed.jpg" alt="" />
+            <figcaption>
+              Far away street view with zoom (reference: blue car).
+            </figcaption>
+          </figure>
+          <figure>
+            <img src="images/part2_unzoomed.jpg" alt="" />
+            <figcaption>
+              Close up street view without zoom (reference: blue car).
+            </figcaption>
+          </figure>
+        </div>
+      </section>
+
+      <!-- Part 3 -->
+      <section id="part3" class="section">
+        <h2>Part 3: The Dolly Zoom</h2>
+        <figure class="block">
+          <img src="images/part3_dolly.gif" alt="" />
+          <figcaption>
+            Subject size held steady while background scale shifts with zoom.
+          </figcaption>
+        </figure>
+      </section>
+    </main>
+  </body>
+</html>
