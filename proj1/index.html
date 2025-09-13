@@ -126,7 +126,7 @@
           problem I faced was that some images had artifacts on their borders. I
           decided to solve this with cropping to prevent the alignment algorithm
           from getting drawn away from properly aligning the core/central part
-          of the image. For each candidate shift I score similarity on an
+          of the image. For each candidate shift, I score similarity on an
           interior crop (~7% reduction on each top/bottom/left/right margin), so
           borders don't dominate. I decided to use
           <em>Euclidean Distance</em> (sum of squared pixel differences; lower
