@@ -1,2 +1,6 @@
 submissions
 *.DS_Store
+*.venv
+
+
+my_work

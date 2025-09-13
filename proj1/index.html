@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>CS180 Proj0 — Becoming Friends with Your Camera</title>
+
+    <!-- Inter (thin) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap"
+      rel="stylesheet"
+    />
+
+    <!-- Keep the exact same stylesheet -->
+    <link rel="stylesheet" href="style.css" />
+
+    <style>
+      :root {
+        /* Set the exact image height (in px) for all thumbnails */
+        --thumb-h: 320px;
+      }
+
+      .disp-R {
+        color: #e11d48;
+        font-weight: 600;
+      } /* red */
+      .disp-B {
+        color: #2563eb;
+        font-weight: 600;
+      } /* blue */
+      .metrics-note {
+        font-size: 0.95rem;
+        opacity: 0.85;
+        margin-bottom: 1rem;
+      }
+      .kicker {
+        display: none;
+      }
+
+      /* Center the grid within the container, and center items within each cell */
+      .grid {
+        margin-left: auto;
+        margin-right: auto;
+        justify-items: center;
+        align-items: center;
+      }
+
+      .grid figure {
+        display: flex;
+        flex-direction: column;
+        align-items: center; /* center within column */
+        text-align: center; /* center caption text */
+        width: 100%;
+      }
+
+      /* ✅ Every image has the same fixed pixel height; keep aspect ratio */
+      .grid img {
+        height: var(--thumb-h);
+        width: auto; /* keep aspect ratio */
+        max-width: 100%; /* don't overflow narrow columns */
+        object-fit: contain; /* letterbox if needed */
+        display: block;
+      }
+
+      /* If an image can't load, keep the same visual height so rows stay even */
+      .grid .figure-error {
+        min-height: var(--thumb-h);
+        padding: 1rem;
+        border: 1px dashed #ddd;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        box-sizing: border-box;
+        width: 100%;
+      }
+    </style>
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="container">
+        <h1 class="title">CS 180 Programming Project #1</h1>
+        <!-- <p class="kicker">
+          CS180: Intro to Computer Vision & Computational Photography
+        </p> -->
+        <h2 class="sub">
+          Images of the Russian Empire: Colorizing the Prokudin-Gorskii photo
+          collection
+        </h2>
+        <h3 class="due">
+          <span> Anirudh Kotamraju</span>
+        </h3>
+      </div>
+    </header>
+
+    <main class="container">
+      <!-- One-time explanation of shift terminology -->
+      <p class="metrics-note">
+        <br />
+        The goal of this project was to transform the Prokudin-Gorskii photo
+        collection into color images of 20th century Russia. For each subject
+        environment, Prokudin-Gorskii captured the scene with three filters
+        (red, green, blue), each onto a separate glass plate. Through image
+        manipulation techniques to align each triplet of glass plate images,
+        this project hopes to reconstruct what Prokudin-Gorskii once saw.
+
+        <br />
+        <br />
+        Captions show
+        <span class="disp-R">Red</span> and
+        <span class="disp-B">Blue</span> pixel displacements
+        <code>[row, column]</code> relative to the Green channel.
+      </p>
+
+      <!-- Section 1: Naive results -->
+      <section id="naive" class="section">
+        <h2>Section 1: Single-Scale Alignment Results</h2>
+        <p>
+          I split each glass plate into its three channels. I decided to align
+          the Red and Blue channels to Green by exhaustively trying small
+          integer shifts (within ±40 px). The motivation for choosing alignment
+          to the Green channel is discussed further in Section 2. One initial
+          problem I faced was that some images had artifacts on their borders. I
+          decided to solve this with cropping to prevent the alignment algorithm
+          from getting drawn away from properly aligning the core/central part
+          of the image. For each candidate shift I score similarity on an
+          interior crop (~7% reduction on each top/bottom/left/right margin), so
+          borders don't dominate. I decided to use
+          <em>Euclidean Distance</em> (sum of squared pixel differences; lower
+          is better) as my metric to score various alignments. Images are
+          converted to float before scoring.
+        </p>
+        <div id="naive-grid" class="grid"></div>
+      </section>
+
+      <!-- Section 2: Pyramid results -->
+      <section id="pyramid" class="section">
+        <h2>Section 2: Multi-Scale Pyramid Alignment Results</h2>
+        <p>
+          To handle larger displacements efficiently (crucial for the
+          <code>.tif</code> files), I build an image pyramid by downsampling
+          about 2x per level. I find a rough shift at the coarsest level,
+          upsample that estimate, and refine it with a small local search at the
+          next finer level—repeating until full resolution. The same scoring
+          choice of Euclidean distance and the same interior crop (~7% reduction
+          on each margin) are used at every level.
+
+          <br />
+          <br />
+          Initially, I aligned the red and green channels to the blue channel
+          for each image. This worked for most images, except for emir.tif. This
+          was one of the big problems I faced. Despite tuning my parameters for
+          displacement search repeatedly, emir continued to be misaligned. In
+          other words, the displacements for the red plate especially were
+          unreasonably large. Then, I decided to align the red and blue channels
+          to the green channel. This helped tremendously and allowed all three
+          channels of emir to align well. My hypothesis is that this worked
+          since unlike many of the other images, emir's blue channel intensity
+          wasn't as proportional to the green or red channels.
+        </p>
+        <div id="pyramid-grid" class="grid"></div>
+      </section>
+
+      <!-- Section 3: Additional (flagged) pyramid results -->
+      <section id="additional" class="section">
+        <h2>Section 3: Additional Pyramid Results</h2>
+        <p class="metrics-note">
+          Here are the results of the pyramid alignment algorithm on some of my
+          selected images from the collection.
+        </p>
+        <div id="additional-grid" class="grid"></div>
+      </section>
+    </main>
+
+    <script>
+      // ------------------------------------------------------------
+      // Configuration
+      // ------------------------------------------------------------
+      const SECTIONS = {
+        naive: {
+          jsonPaths: ["public/naive_results/naive_metrics.json"],
+          baseDir: "public/naive_results/",
+        },
+        pyramid: {
+          jsonPaths: ["public/pyramid_results/pyramid_metrics.json"],
+          baseDir: "public/pyramid_results/",
+        },
+      };
+
+      // If the filename is .tif/.tiff (often not directly viewable), try friendlier fallbacks:
+      const TIF_FALLBACK_EXTS = [".jpg", ".png", ".jpeg", ".webp", ".tif"];
+
+      // ------------------------------------------------------------
+      // Helpers
+      // ------------------------------------------------------------
+      async function fetchJsonWithFallback(urls) {
+        for (const url of urls) {
+          try {
+            const res = await fetch(url, { cache: "no-store" });
+            if (res.ok) return await res.json();
+          } catch (_) {}
+        }
+        throw new Error("Unable to load any of: " + urls.join(", "));
+      }
+
+      function pathCandidatesFor(filename, baseDir) {
+        const dot = filename.lastIndexOf(".");
+        const base = dot >= 0 ? filename.slice(0, dot) : filename;
+        const ext = dot >= 0 ? filename.slice(dot).toLowerCase() : "";
+
+        if (ext === ".tif" || ext === ".tiff") {
+          return TIF_FALLBACK_EXTS.map((e) => baseDir + base + e);
+        }
+        return [
+          baseDir + filename,
+          baseDir + base + ".png",
+          baseDir + base + ".jpg",
+          baseDir + base + ".jpeg",
+          baseDir + base + ".webp",
+        ];
+      }
+
+      function displayNameFromFilename(filename) {
+        const last = filename.split(/[\\/]/).pop();
+        const i = last.indexOf(".");
+        return i === -1 ? last : last.slice(0, i);
+      }
+
+      function createFigureElement(filename, rDisp, bDisp, baseDir) {
+        const fig = document.createElement("figure");
+
+        const img = document.createElement("img");
+        img.loading = "lazy";
+        img.alt = filename;
+
+        const candidates = pathCandidatesFor(filename, baseDir);
+        let idx = 0;
+        img.src = candidates[idx];
+
+        img.onerror = () => {
+          idx += 1;
+          if (idx < candidates.length) {
+            img.src = candidates[idx];
+          } else {
+            const stub = document.createElement("div");
+            stub.className = "figure-error";
+            stub.innerHTML = `<strong>Preview unavailable:</strong> <code>${filename}</code>`;
+            fig.replaceChildren(stub);
+          }
+        };
+
+        const cap = document.createElement("figcaption");
+        const shortName = displayNameFromFilename(filename);
+        cap.innerHTML = `
+          <strong>${shortName}</strong><br />
+          <span class="disp-R">R</span> [${rDisp[0]}, ${rDisp[1]}]
+          &nbsp;&middot;&nbsp;
+          <span class="disp-B">B</span> [${bDisp[0]}, ${bDisp[1]}]
+        `;
+
+        fig.appendChild(img);
+        fig.appendChild(cap);
+        return fig;
+      }
+
+      function buildSection(gridEl, metrics, baseDir) {
+        const files = Object.keys(metrics).sort((a, b) => a.localeCompare(b));
+        for (const fname of files) {
+          const entry = metrics[fname] || {};
+          const r = entry.r_disp || [0, 0];
+          const b = entry.b_disp || [0, 0];
+          gridEl.appendChild(createFigureElement(fname, r, b, baseDir));
+        }
+      }
+
+      // Split pyramid metrics into base and "additional: true"
+      function splitAdditional(metrics) {
+        const base = {};
+        const extra = {};
+        for (const [fname, entry] of Object.entries(metrics)) {
+          if (entry && entry.additional) extra[fname] = entry;
+          else base[fname] = entry;
+        }
+        return { base, extra };
+      }
+
+      // ------------------------------------------------------------
+      // Boot
+      // ------------------------------------------------------------
+      (async function init() {
+        const naiveGrid = document.getElementById("naive-grid");
+        const pyramidGrid = document.getElementById("pyramid-grid");
+        const additionalSection = document.getElementById("additional");
+        const additionalGrid = document.getElementById("additional-grid");
+
+        try {
+          const naive = await fetchJsonWithFallback(SECTIONS.naive.jsonPaths);
+          buildSection(naiveGrid, naive, SECTIONS.naive.baseDir);
+        } catch (e) {
+          naiveGrid.innerHTML = `<p class="metrics-note"><strong>Could not load</strong> <code>${SECTIONS.naive.jsonPaths.join(
+            "</code> or <code>",
+          )}</code>.</p>`;
+        }
+
+        try {
+          const pyramid = await fetchJsonWithFallback(
+            SECTIONS.pyramid.jsonPaths,
+          );
+          const { base, extra } = splitAdditional(pyramid);
+
+          // Regular pyramid results
+          buildSection(pyramidGrid, base, SECTIONS.pyramid.baseDir);
+
+          // Additional results section (hide if none)
+          if (Object.keys(extra).length > 0) {
+            buildSection(additionalGrid, extra, SECTIONS.pyramid.baseDir);
+          } else {
+            additionalSection.style.display = "none";
+          }
+        } catch (e) {
+          pyramidGrid.innerHTML = `<p class="metrics-note"><strong>Could not load</strong> <code>${SECTIONS.pyramid.jsonPaths.join(
+            "</code> or <code>",
+          )}</code>.</p>`;
+          // If pyramid didn't load, hide the additional section too
+          additionalSection.style.display = "none";
+        }
+      })();
+    </script>
+  </body>
+</html>

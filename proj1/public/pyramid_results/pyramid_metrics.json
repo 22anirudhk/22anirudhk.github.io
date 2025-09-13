@@ -1,0 +1,31 @@
+{
+  "emir.tif.jpg": { "r_disp": [57, 17], "b_disp": [-49, -24] },
+  "italil.tif.jpg": { "r_disp": [38, 15], "b_disp": [-38, -21] },
+  "monastery.jpg.jpg": { "r_disp": [6, 1], "b_disp": [3, -2] },
+  "church.tif.jpg": { "r_disp": [33, -8], "b_disp": [-25, -4] },
+  "me2-forest.tif.jpg": {
+    "r_disp": [58, 37],
+    "b_disp": [-36, 32],
+    "additional": true
+  },
+  "three_generations.tif.jpg": { "r_disp": [58, -3], "b_disp": [-53, -14] },
+  "lugano.tif.jpg": { "r_disp": [52, -13], "b_disp": [-41, 16] },
+  "melons.tif.jpg": { "r_disp": [96, 4], "b_disp": [-82, -10] },
+  "lastochikino.tif.jpg": { "r_disp": [78, -7], "b_disp": [2, 2] },
+  "tobolsk.jpg.jpg": { "r_disp": [4, 1], "b_disp": [-3, -3] },
+  "icon.tif.jpg": { "r_disp": [48, 5], "b_disp": [-40, -17] },
+  "cathedral.jpg.jpg": { "r_disp": [7, 1], "b_disp": [-5, -2] },
+  "siren.tif.jpg": { "r_disp": [47, -18], "b_disp": [-49, 6] },
+  "self_portrait.tif.jpg": { "r_disp": [98, 8], "b_disp": [-78, -29] },
+  "harvesters.tif.jpg": { "r_disp": [65, -3], "b_disp": [-59, -16] },
+  "me1-railroad.tif.jpg": {
+    "r_disp": [79, -2],
+    "b_disp": [-28, -1],
+    "additional": true
+  },
+  "me3-gospel.tif.jpg": {
+    "r_disp": [47, -14],
+    "b_disp": [-39, 12],
+    "additional": true
+  }
+}
