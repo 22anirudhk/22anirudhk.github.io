@@ -142,11 +142,12 @@
         <p>
           To handle larger displacements efficiently (crucial for the
           <code>.tif</code> files), I build an image pyramid by downsampling
-          about 2x per level. I find a rough shift at the coarsest level,
-          upsample that estimate, and refine it with a small local search at the
-          next finer level—repeating until full resolution. The same scoring
-          choice of Euclidean distance and the same interior crop (~7% reduction
-          on each margin) are used at every level.
+          about 2x per level. I find a rough shift at the coarsest level (when
+          the width/height become less than 128px/128px), upsample that
+          estimate, and refine it with a small local search at the next finer
+          level—repeating until full resolution. The same scoring choice of
+          Euclidean distance and the same interior crop (~7% reduction on each
+          margin) are used at every level.
 
           <br />
           <br />
