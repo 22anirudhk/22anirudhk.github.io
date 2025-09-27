@@ -197,9 +197,9 @@
           multiply-and-sum, which removes the innermost loops in Python. On the
           9×9 box filter, the four-loop code takes about 36 s, the two-loop
           version about 5 s, and SciPy’s optimized
-          <code>convolve2d w/ mode='same' and fill value 0</code> takes roughly
-          0.2 s. Comparing the results against SciPy shows that my padding
-          reproduces its zero-boundary behavior.
+          <code>convolve2d w/ boundary mode='same' and fill value 0</code> takes
+          roughly 0.2 s. Comparing the results against SciPy shows that my
+          padding reproduces its zero-boundary behavior.
         </p>
         <div class="code-snippets">
           <h3>Padding Helper I Made</h3>
@@ -316,7 +316,10 @@ def convolve_faster(img, filter_arr):
 
       <!-- Q1.2 -->
       <section id="q1p2" class="section">
-        <h2>Section 1.2: Gradient Magnitude &amp; Edge Detection</h2>
+        <h2>
+          Section 1.2: Gradient Magnitude &amp; Edge Detection (Finite
+          Difference Operator)
+        </h2>
         <p>
           I reuse the faster convolution approach to filter the cameraman image
           with the finite-difference operators <code>D_x = [1, 0, -1]</code> and
@@ -345,7 +348,7 @@ def convolve_faster(img, filter_arr):
 
       <!-- Q1.3 -->
       <section id="q1p3" class="section">
-        <h2>Section 1.3: Derivative of Gaussian (DoG)</h2>
+        <h2>Section 1.3: Derivative of Gaussian (DoG) Filter</h2>
         <p>
           I build the 2D Gaussian blur by generating a 1D kernel with
           <code>cv2.getGaussianKernel</code> and taking its outer product with
@@ -403,8 +406,8 @@ def convolve_faster(img, filter_arr):
         </p>
         <p>
           The Taj and waterfall examples show α ∈ {1, 3, 5}. Increasing α
-          strengthens fine edges but quickly exaggerates other parts of the
-          image. Blurring the waterfall first demonstrates the limit: adding
+          strengthens fine edges but quickly exaggerates them if alpha becomes
+          too large. Blurring the waterfall first demonstrates the limit: adding
           back high frequencies cannot recover detail that low-pass filtering
           already removed.
         </p>
@@ -751,7 +754,7 @@ def convolve_faster(img, filter_arr):
               },
               {
                 src: P("q1p3-gradient-binarized-regularfilter.png"),
-                title: "Binarized Gradient Magnitude ",
+                title: "Binarized Gradient Magnitude (regular)",
               },
             ],
           ],
@@ -939,7 +942,7 @@ def convolve_faster(img, filter_arr):
       const G23 = [
         {
           label: "Apple ↔ Orange (Oraple)",
-          note: "Rows: m Gaussian stacks, Laplacian stacks, then masked layers for selected octaves, then summed outputs.",
+          note: "Rows: inputs, Gaussian stacks, Laplacian stacks, then masked layers for selected octaves, then summed outputs.",
           inputs: [
             { src: P("q2p3-apple.jpeg"), title: "Apple" },
             { src: P("q2p3-orange.jpeg"), title: "Orange" },
@@ -1097,7 +1100,7 @@ def convolve_faster(img, filter_arr):
               { src: P("q2p3-eye.jpg"), title: "Eye" },
               {
                 src: P("q2p3-eye-mask.png"),
-                title: "Eye Mask (irregular)",
+                title: "Eye Mask (irregular with rounded edges)",
               },
               { src: P("q2p3-me.jpg"), title: "Me" },
             ],
