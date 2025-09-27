@@ -479,8 +479,8 @@ def convolve_faster(img, filter_arr):
           at each level with the same σ = 5, 31×31 Gaussian to feather the seam.
           The Apple↔Orange visualizations document the required Gaussian and
           Laplacian stacks, while the cow↔horse and eye↔me blends provide the
-          two additional examples (one of them uses an irregular mask to taper
-          the transplant smoothly).
+          two additional examples (one of them uses an irregular ellipse mask to
+          taper the transplant smoothly).
         </p>
         <div id="q2p3-grid" class="grid"></div>
         <h4>
@@ -1099,9 +1099,9 @@ def convolve_faster(img, filter_arr):
             [
               { src: P("q2p3-eye.jpg"), title: "Eye" },
               {
-                src: P("q2p3-eye-mask.png"),
+                src: P("q2p3-gd-eyemask.png"),
                 title:
-                  "Eye Mask (irregular with rounded edges. Drawn by Hand in Google Drawings)",
+                  "Eye Mask (irregular mask of an ellipse. Drawn in Google Drawings)",
               },
               { src: P("q2p3-me.jpg"), title: "Me" },
             ],
