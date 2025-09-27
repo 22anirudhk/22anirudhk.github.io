@@ -1,0 +1,1124 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>CS180 Proj2</title>
+
+    <!-- Inter (thin) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap"
+      rel="stylesheet"
+    />
+
+    <!-- Keep the exact same stylesheet -->
+    <link rel="stylesheet" href="style.css" />
+
+    <style>
+      :root {
+        /* Set the exact image height (in px) for all thumbnails */
+        --thumb-h: 320px;
+      }
+
+      .disp-R {
+        color: #e11d48;
+        font-weight: 600;
+      } /* red */
+      .disp-B {
+        color: #2563eb;
+        font-weight: 600;
+      } /* blue */
+      .metrics-note {
+        font-size: 0.95rem;
+        opacity: 0.85;
+        margin-bottom: 1rem;
+      }
+      .kicker {
+        display: none;
+      }
+
+      /* Center the grid within the container, and center items within each cell */
+      .grid {
+        margin-left: auto;
+        margin-right: auto;
+        justify-items: center;
+        align-items: center;
+      }
+
+      .grid > .row-grid {
+        grid-column: 1 / -1; /* let multi-image rows use the full width */
+        width: 100%;
+      }
+
+      .grid figure {
+        display: flex;
+        flex-direction: column;
+        align-items: center; /* center within column */
+        text-align: center; /* center caption text */
+        width: 100%;
+      }
+
+      /* ✅ Thumbnails shrink as needed but never exceed the shared max height */
+      .grid img {
+        height: auto;
+        max-height: var(--thumb-h);
+        width: auto; /* keep aspect ratio */
+        max-width: 100%; /* don't overflow narrow columns */
+        object-fit: contain; /* letterbox if needed */
+        display: block;
+      }
+
+      /* If an image can't load, keep the same visual height so rows stay even */
+      .grid .figure-error {
+        min-height: var(--thumb-h);
+        padding: 1rem;
+        border: 1px dashed #ddd;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        box-sizing: border-box;
+        width: 100%;
+      }
+
+      /* Minimal, non-invasive group layout (no style changes to existing classes) */
+      .group-block {
+        width: 100%;
+      }
+      .group-block h4 {
+        margin: 0.75rem 0 0.5rem;
+      }
+      .group-block .label {
+        opacity: 0.8;
+        margin: 0.25rem 0 0.5rem;
+        font-size: 0.95rem;
+      }
+      .group-block hr {
+        border: none;
+        border-top: 1px solid #eee;
+        margin: 0.75rem 0;
+      }
+
+      /* NEW: explicit same-row layout without touching external stylesheet */
+      .row-grid {
+        display: flex;
+        gap: 0.9rem;
+        justify-content: center;
+        align-items: flex-start;
+        overflow-x: auto; /* keep items on one line; scroll on narrow screens */
+        padding-bottom: 0.25rem; /* room for scrollbar */
+      }
+      .row-grid figure {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        flex: 1 1 220px; /* prefer moderate width, shrink if needed */
+        min-width: 0; /* allow flexbox to shrink below intrinsic width */
+      }
+      .row-grid img {
+        height: auto;
+        max-height: var(--thumb-h);
+        width: auto;
+        max-width: 100%;
+        object-fit: contain;
+        display: block;
+      }
+      .row-grid .figure-error {
+        min-height: var(--thumb-h);
+        padding: 1rem;
+        border: 1px dashed #ddd;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        box-sizing: border-box;
+      }
+
+      .code-snippets {
+        margin: 1.25rem 0;
+      }
+      .code-snippets h3 {
+        margin-bottom: 0.5rem;
+      }
+      .code-snippets pre {
+        background: #f4f4f5;
+        border: 1px solid #e5e5e5;
+        border-radius: 6px;
+        padding: 0.75rem 1rem;
+        overflow-x: auto;
+        font-family: "SFMono-Regular", Menlo, Monaco, Consolas,
+          "Liberation Mono", "Courier New", monospace;
+        font-size: 0.9rem;
+        margin-bottom: 1.25rem;
+      }
+    </style>
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="container">
+        <h1 class="title">CS 180 Programming Project #2</h1>
+        <!-- <p class="kicker">
+          CS180: Intro to Computer Vision & Computational Photography
+        </p> -->
+        <h2 class="sub">Fun with Filters and Frequencies</h2>
+        <h3 class="due"><span> Anirudh Kotamraju</span></h3>
+      </div>
+    </header>
+
+    <main class="container">
+      <p class="metrics-note">
+        This project explores spatial filtering and frequency-domain ideas:
+        finite differences, gradient magnitude &amp; edge detection, derivatives
+        of Gaussians (DoG), unsharp masking for sharpening, hybrid images, and
+        multi-resolution (Gaussian/Laplacian pyramid) blending.
+        <br /><br />
+      </p>
+
+      <!-- Q1.1 -->
+      <section id="q1p1" class="section">
+        <h2>Section 1.1: Convolutions from Scratch</h2>
+        <p>
+          I implemented convolution directly from the summation definition using
+          NumPy. Before sliding a kernel across the image, I add just enough
+          zero padding so odd-sized filters (the 9×9 box filter here) keep the
+          output the same size. Flipping the kernel vertically and horizontally
+          turns the sliding operation into a true convolution instead of a
+          cross-correlation.
+        </p>
+        <p>
+          The first version keeps four explicit loops—two for the image
+          coordinates and two for the kernel taps. The second still visits every
+          output pixel but hands the inner product to NumPy’s vectorized
+          multiply-and-sum, which removes the innermost loops in Python. On the
+          9×9 box filter, the four-loop code takes about 36 s, the two-loop
+          version about 5 s, and SciPy’s optimized
+          <code>convolve2d w/ mode='same' and fill value 0</code> takes roughly
+          0.2 s. Comparing the results against SciPy shows that my padding
+          reproduces its zero-boundary behavior.
+        </p>
+        <div class="code-snippets">
+          <h3>Padding Helper I Made</h3>
+          <pre><code class="language-python">
+
+
+def pad_image(img, filter_arr):
+  img_rows, img_cols = img.shape
+
+  filter_rows, filter_cols = filter_arr.shape[0], filter_arr.shape[1]
+
+  # what shape of convolved image would be if we didn't do padding
+  unpadded_convolved_img_rows = img_rows - filter_rows + 1
+  unpadded_convolved_img_cols = img_cols - filter_cols + 1
+
+  row_padding = img_rows - unpadded_convolved_img_rows
+  col_padding = img_cols - unpadded_convolved_img_cols
+
+  # padding s.t. only exact amt needed is added
+  row_padding_top = row_padding // 2
+  row_padding_bottom = row_padding - row_padding_top
+  col_padding_left = col_padding // 2
+  col_padding_right = col_padding - col_padding_left
+
+  # crucial: use padded_img.shape throughout so you add right amt of padding based on current state of padded img
+  padded_img = img
+  if row_padding_top > 0:
+      padded_img = np.concatenate((np.zeros((row_padding_top, padded_img.shape[1])), padded_img), axis=0)
+  if row_padding_bottom > 0:
+      padded_img = np.concatenate((padded_img, np.zeros((row_padding_bottom, padded_img.shape[1]))), axis=0)
+  if col_padding_left > 0:
+      padded_img = np.concatenate((np.zeros((padded_img.shape[0], col_padding_left)), padded_img), axis=1)
+  if col_padding_right > 0:
+      padded_img = np.concatenate((padded_img, np.zeros((padded_img.shape[0], col_padding_right))), axis=1)
+
+  return padded_img
+
+</code></pre>
+
+          <h3>Four-Loop Convolution</h3>
+          <pre><code class="language-python">
+def convolve_naive(img, filter_arr):
+  # do padding
+  img = pad_image(img, filter_arr)
+
+  # CRUCIAL: FLIP FILTER first horizontally then vertically
+  filter_arr = np.flip(filter_arr, axis=0)
+  filter_arr = np.flip(filter_arr, axis=1)
+
+  out_rows = img.shape[0] - filter_arr.shape[0] + 1
+  out_cols = img.shape[1] - filter_arr.shape[1] + 1
+  out = np.zeros((out_rows, out_cols))
+
+  filter_rows, filter_cols = filter_arr.shape[0], filter_arr.shape[1]
+  num_filter_pix = filter_rows * filter_cols
+
+  for img_start_r in range(out_rows):
+      for img_start_c in range(out_cols):
+          # get part of image that is overlapped with the filter
+          overlapped_img = img[img_start_r : img_start_r +filter_rows, img_start_c : img_start_c+filter_cols]
+
+          assert overlapped_img.shape == filter_arr.shape
+
+          overlap_sum = 0
+          
+          for filter_r in range(filter_arr.shape[0]):
+              for filter_c in range(filter_arr.shape[1]):
+                  overlap_sum += overlapped_img[filter_r][filter_c] * filter_arr[filter_r, filter_c]
+              
+          # now do average of the sum. this is what will be written out for this pixel
+          value = int(overlap_sum)
+
+          out[img_start_r][img_start_c] = value
+
+  return out
+
+</code></pre>
+          <h3>Two-Loop Convolution</h3>
+          <pre><code class="language-python">
+
+def convolve_faster(img, filter_arr):
+  # do padding
+  img = pad_image(img, filter_arr)
+
+  filter_arr = np.flip(filter_arr, axis=0)
+  filter_arr = np.flip(filter_arr, axis=1)
+
+  out_rows = img.shape[0] - filter_arr.shape[0] + 1
+  out_cols = img.shape[1] - filter_arr.shape[1] + 1
+  out = np.zeros((out_rows, out_cols))
+
+  filter_rows, filter_cols = filter_arr.shape[0], filter_arr.shape[1]
+  num_filter_pix = filter_rows * filter_cols
+
+  for img_start_r in range(out_rows):
+      for img_start_c in range(out_cols):
+          # get part of image that is overlapped with the filter
+          overlapped_img = img[img_start_r : img_start_r +filter_rows, img_start_c : img_start_c+filter_cols]
+
+          assert overlapped_img.shape == filter_arr.shape            
+
+          multiplied_img = np.multiply(overlapped_img, filter_arr)
+              
+          # now do average of the sum. this is what will be written out for this pixel
+          value = int(np.sum(multiplied_img))
+
+          out[img_start_r][img_start_c] = value
+
+  return out
+</code></pre>
+        </div>
+        <div id="q1p1-grid" class="grid"></div>
+      </section>
+
+      <!-- Q1.2 -->
+      <section id="q1p2" class="section">
+        <h2>Section 1.2: Gradient Magnitude &amp; Edge Detection</h2>
+        <p>
+          I reuse the faster convolution approach to filter the cameraman image
+          with the finite-difference operators <code>D_x = [1, 0, -1]</code> and
+          <code>D_y = [1, 0, -1]^T</code>. Keeping everything in floating point
+          lets me square, sum, and take <code>sqrt(dx**2 + dy**2)</code> without
+          losing sign information; only when saving do I rescale the arrays into
+          the 0–255 display range.
+        </p>
+        <p>
+          These tiny three-tap filters act like slope meters: a constant patch
+          gives near-zero response, while an intensity jump produces a large
+          positive or negative value. <code>D_x</code> is tuned to left-right
+          changes, so it lights up vertical edges where the image differs across
+          columns; <code>D_y</code> does the same for top-bottom differences,
+          revealing horizontal edges. Combining the horizontal and vertical
+          responses therefore highlights places where brightness changes
+          abruptly.
+        </p>
+        <p>
+          To produce a binary edge map, I swept thresholds and chose 30—it keeps
+          the tripod, horizon, and coat edges while suppressing high-frequency
+          sensor noise in the sky.
+        </p>
+        <div id="q1p2-grid" class="grid"></div>
+      </section>
+
+      <!-- Q1.3 -->
+      <section id="q1p3" class="section">
+        <h2>Section 1.3: Derivative of Gaussian (DoG)</h2>
+        <p>
+          I build the 2D Gaussian blur by generating a 1D kernel with
+          <code>cv2.getGaussianKernel</code> and taking its outer product with
+          itself. For σ = 1.4 the kernel size is 9×9. Convolving cameraman with
+          this blur before computing gradients reuses the Part 1.2 pipeline but
+          with much less noise.
+        </p>
+        <p>
+          Intuitively, the Gaussian is a weighted average that suppresses tiny
+          pixel-to-pixel glitches while leaving broader structures intact, so
+          the derivative sees clean ramps instead of spiky noise. Building the
+          DoG filters goes one step further: smoothing and differentiation merge
+          into a single kernel, guaranteeing the same noiseless derivative no
+          matter which order we apply them.
+        </p>
+        <p>
+          I also differentiate the Gaussian itself: convolving the 9×9 kernel
+          with <code>D_x</code> and <code>D_y</code> yields the DoG filters
+          shown below. Filtering cameraman with these derivative-of-Gaussian
+          kernels produces gradients that line up with the
+          blur-then-differentiate approach.
+        </p>
+
+        <p>
+          Similar to part 1.2, I swept a few candidate thresholds and settled on
+          30 for the binarized gradient magnitude image; it strips away most of
+          the residual noise while still hanging onto some horizon edges I want
+          to highlight.
+        </p>
+
+        <div id="q1p3-grid" class="grid"></div>
+      </section>
+
+      <!-- Q2.1 -->
+      <section id="q2p1" class="section">
+        <h2>Section 2.1: Image Sharpening (Unsharp Masking)</h2>
+        <p>
+          I rewrote unsharp masking as a single convolution: begin with the
+          scale filter that is zero everywhere except for a center value of
+          <code>1 + α</code>, subtract <code>α</code> times the Gaussian blur (σ
+          = 2, 13×13 kernel), and treat that difference as one unsharp filter.
+          Convolving each color channel with this combined filter simultaneously
+          adds back the amplified high frequencies while preserving the low-pass
+          component; my helper then writes out the blurred image, the
+          high-frequency layer, and the sharpened result after clipping into the
+          display range.
+        </p>
+        <p>
+          Another way to view it: the blur is a soft-focus version that holds
+          the coarse shapes, so subtracting it extracts just the wiggles and
+          edges our eyes interpret as detail. Scaling that high-frequency layer
+          and adding it back exaggerates local contrast without rewriting the
+          underlying low-frequency lighting, which matches the spec’s derivation
+          of unsharp masking as “original + boosted detail.”
+        </p>
+        <p>
+          The Taj and waterfall examples show α ∈ {1, 3, 5}. Increasing α
+          strengthens fine edges but quickly exaggerates other parts of the
+          image. Blurring the waterfall first demonstrates the limit: adding
+          back high frequencies cannot recover detail that low-pass filtering
+          already removed.
+        </p>
+
+        <div id="q2p1-grid" class="grid"></div>
+      </section>
+
+      <!-- Q2.2 -->
+      <section id="q2p2" class="section">
+        <h2>Section 2.2: Hybrid Images</h2>
+        <p>
+          Each hybrid starts by bringing the two RGB images into rough alignment
+          (my own pairs are pre-cropped to the same size beforehand). I work in
+          floating point, blur the “far” image with σ = 5 using a 31×31 Gaussian
+          kernel to keep only its low frequencies, subtract that same 31×31 blur
+          from the “close” image to isolate high frequencies, and average the
+          two bands before converting back to an 8-bit image for saving.
+          Empirically (trial error multiple times), σ = 5 struck the cleanest
+          balance between suppressing noise and preserving the recognizable
+          outlines I wanted.
+        </p>
+        <p>
+          The Gaussian blur acts like the retinal averaging that happens when we
+          stand farther away or shrink an image: small details smear together,
+          leaving just the low-frequency silhouette that still reads correctly
+          at a distance. High-frequency edges survive only when we view the
+          hybrid up close, so stealing them from the “close” subject forces our
+          brain to recognize that subject when the pixels are large in our field
+          of view. Mixing those two filtered bands therefore gives the expected
+          flip: near distances are dominated by the sharp details, while far
+          distances emphasize the smooth structure of the blurred image,
+          matching the spec’s description of how perception switches with
+          viewing distance.
+        </p>
+        <p>
+          Cat↔Derek is the required reference; Dog↔Muffin and Happy↔Angry are my
+          additional pairs; Me↔Federer includes the full workflow: aligned
+          inputs, filtered components, and Fourier log-magnitude plots that show
+          the low frequencies of Federer and the high frequencies of me
+          dominating where expected. All examples use σ = 5 (31×31 kernel) for
+          both blur steps.
+        </p>
+        <div id="q2p2-grid" class="grid"></div>
+      </section>
+
+      <!-- Q2.3 -->
+      <section id="q2p3" class="section">
+        <h2>
+          Section 2.3: Multi-Resolution Blending (Gaussian/Laplacian Pyramids)
+        </h2>
+        <p>
+          I build Gaussian stacks by repeatedly blurring each RGB channel (σ =
+          5, 31×31 kernel) and collecting the results without downsampling. The
+          Laplacian stack is the difference between neighboring Gaussian levels,
+          with the coarsest Gaussian added at the end so that summing the stack
+          reconstructs the original image in floating point.
+        </p>
+        <p>
+          Thinking in frequency bands helps: the shallow Laplacian levels carry
+          crisp detail, while deeper levels describe only slow intensity
+          changes. When we blend each band separately, the fine-scale seams stay
+          confined to the levels that actually contain those frequencies, so the
+          blurred mask can gently hand off ownership from one image to the other
+          without creating a step.
+        </p>
+        <p>
+          During blending, every Laplacian level is combined as
+          <code>mask · A + (1-mask) · B</code>, and the mask itself is blurred
+          at each level with the same σ = 5, 31×31 Gaussian to feather the seam.
+          The Apple↔Orange visualizations document the required Gaussian and
+          Laplacian stacks, while the cow↔horse and eye↔me blends provide the
+          two additional examples (one of them uses an irregular mask to taper
+          the transplant smoothly).
+        </p>
+        <div id="q2p3-grid" class="grid"></div>
+        <h4>
+          Most Important Thing I Learned
+          <p>
+            By far, the most important thing I learned was the importance of
+            knowing when to clip images in [0, 255], normalize images, and cast
+            images to uint8. There were many instances of me doing the wrong
+            combination of these operations, leading to unexpected blown out or
+            darkened portions of the images. A related learning was to be
+            cognizant of the fact that often transformations done purely for
+            visualization should not affect downstream steps that may need the
+            full range of data.
+          </p>
+        </h4>
+      </section>
+    </main>
+
+    <script>
+      // ----------------------------
+      // Tiny helper to path inside /public
+      // ----------------------------
+      const P = (basename) => "public/" + basename;
+
+      // ----------------------------
+      // Figure + Grid helpers (same look)
+      // ----------------------------
+      function createFigure(src, title, subtitle = "") {
+        const fig = document.createElement("figure");
+
+        const img = document.createElement("img");
+        img.loading = "lazy";
+        img.alt = title || src;
+        img.src = src;
+
+        const cap = document.createElement("figcaption");
+        cap.innerHTML =
+          "<strong>" +
+          (title || "Untitled") +
+          "</strong>" +
+          (subtitle ? "<br/>" + subtitle : "");
+
+        img.onerror = () => {
+          const stub = document.createElement("div");
+          stub.className = "figure-error";
+          stub.innerHTML =
+            "<strong>Preview unavailable:</strong> <code>" +
+            src.replace(/</g, "&lt;").replace(/>/g, "&gt;") +
+            "</code>";
+          fig.replaceChildren(stub);
+        };
+
+        fig.appendChild(img);
+        fig.appendChild(cap);
+        return fig;
+      }
+
+      // Build a simple flat grid (backward-compatible)
+      function buildFlatGrid(gridEl, items) {
+        for (const it of items) {
+          gridEl.appendChild(createFigure(it.src, it.title, it.subtitle));
+        }
+      }
+
+      // NEW: Build a grid that understands "rows"
+      // Pass either a flat array (as before) or an array of rows.
+      // A ROW is simply an array of items: [ {src,...}, {src,...} ]
+      // Example:
+      // outputs: [
+      //   [ {src:A}, {src:B} ],   // A and B share one row
+      //   {src:C},                 // C on its own row (auto layout)
+      //   [ {src:D}, {src:E}, {src:F} ]
+      // ]
+      function buildRowAwareGrid(containerEl, itemsOrRows) {
+        const isRow = (x) => Array.isArray(x);
+        for (const entry of itemsOrRows) {
+          if (isRow(entry)) {
+            const row = document.createElement("div");
+            row.className = "row-grid"; // stays on one line; scroll if needed
+            for (const it of entry) {
+              row.appendChild(createFigure(it.src, it.title, it.subtitle));
+            }
+            containerEl.appendChild(row);
+          } else {
+            // fallback: behave like the old flat grid
+            containerEl.appendChild(
+              createFigure(entry.src, entry.title, entry.subtitle),
+            );
+          }
+        }
+      }
+
+      // ----------------------------
+      // New: Grouped rendering
+      // group = { label, note?, inputs: [...], outputs: [...] }
+      // You may also use inputs_rows / outputs_rows for clarity, but
+      // passing nested arrays directly to inputs/outputs works too.
+      // ----------------------------
+      function buildGrouped(gridEl, groups) {
+        for (const g of groups) {
+          const block = document.createElement("div");
+          block.className = "group-block";
+          block.style.gridColumn = "1 / -1"; // span full width within outer grid
+
+          if (g.label) {
+            const h = document.createElement("h4");
+            h.textContent = g.label;
+            block.appendChild(h);
+          }
+          if (g.note) {
+            const n = document.createElement("div");
+            n.className = "label";
+            n.textContent = g.note;
+            block.appendChild(n);
+          }
+
+          const inputsData = g.inputs_rows || g.inputs || [];
+          if (inputsData.length) {
+            const inLabel = document.createElement("div");
+            inLabel.className = "label";
+            inLabel.textContent = "Inputs";
+            block.appendChild(inLabel);
+
+            const inWrap = document.createElement("div");
+            inWrap.className = "grid"; // wrapper for consistent margins
+            buildRowAwareGrid(inWrap, inputsData);
+            block.appendChild(inWrap);
+          }
+
+          const outputsData = g.outputs_rows || g.outputs || [];
+          if (outputsData.length) {
+            const hr = document.createElement("hr");
+            block.appendChild(hr);
+
+            const outLabel = document.createElement("div");
+            outLabel.className = "label";
+            outLabel.textContent = "Outputs";
+            block.appendChild(outLabel);
+
+            const outWrap = document.createElement("div");
+            outWrap.className = "grid";
+            buildRowAwareGrid(outWrap, outputsData);
+            block.appendChild(outWrap);
+          }
+
+          gridEl.appendChild(block);
+        }
+      }
+
+      // ----------------------------
+      // Content (easy to reorder by moving objects)
+      // NOTE: To force items on the same row, just wrap them in an array.
+      // e.g., outputs: [ [A, B], C, [D, E, F] ]
+      // ----------------------------
+
+      // Q1.1 — Finite differences (+ SciPy reference)
+      const G11 = [
+        {
+          label: "Finite Differences on Color/Grayscale + SciPy Reference",
+          inputs: [
+            { src: P("q1p1-color.png"), title: "Input (color)" },
+            { src: P("q1p1-grayscale.png"), title: "Input (grayscale)" },
+          ],
+          outputs: [
+            // Example: keep these two filters on one row
+            [
+              {
+                src: P("q1p1-four-loop-box.png"),
+                title: "My Four Loop Convolution w/ Box Filter (~36s)",
+              },
+              {
+                src: P("q1p1-box.png"),
+                title: " My Two Loop Convolution w/ Box Filter (~5s)",
+              },
+              {
+                src: P("q1p1-scipy-box.png"),
+                title: "SciPy Convolution w/ Box Filter (reference, ~0.2s)",
+              },
+            ],
+
+            [
+              {
+                src: P("q1p1-dx.png"),
+                title: "Finite Difference ∂I/∂x Using My Convolution Function",
+              },
+              {
+                src: P("q1p1-dy.png"),
+                title: "Finite Difference ∂I/∂y Using My Convolution Function",
+              },
+            ],
+            [
+              {
+                src: P("q1p1-scipy-dx.png"),
+                title:
+                  "Finite Difference ∂I/∂x Using SciPy's Convolution Function",
+              },
+              {
+                src: P("q1p1-scipy-dy.png"),
+                title:
+                  "Finite Difference ∂I/∂y Using SciPy's Convolution Function",
+              },
+            ],
+          ],
+        },
+      ];
+
+      // Q1.2 — Gradient magnitude & threshold
+      const G12 = [
+        {
+          label: "Cameraman — Gradients & Edges",
+          inputs: [
+            { src: P("q1p2-cameraman.png"), title: "Input (Cameraman)" },
+          ],
+          outputs: [
+            [
+              { src: P("q1p2-dx.png"), title: "∂I/∂x" },
+              { src: P("q1p2-dy.png"), title: "∂I/∂y" },
+            ],
+            [
+              {
+                src: P("q1p2-gradient.png"),
+                title: "Gradient Magnitude",
+              },
+              {
+                src: P("q1p2-gradient-binarized.png"),
+                title: "Binarized Gradient Magnitude",
+              },
+            ],
+          ],
+        },
+      ];
+
+      // Q1.3 — DoG
+      const G13 = [
+        {
+          label:
+            "DoG Filter Approach (Differentiate Gaussian Filter then Blur with Filter) vs Regular Approach (Blur Image with Gaussian Filter then Differentiate)",
+          inputs: [
+            // Reuse cameraman as the underlying test image
+            { src: P("q1p2-cameraman.png"), title: "Input (Cameraman)" },
+          ],
+          outputs: [
+            [
+              {
+                src: P("other/dx.png"),
+                title: "DoG Filter (dx kernel)",
+              },
+              {
+                src: P("other/dy.png"),
+                title: "DoG Filter (dy kernel)",
+              },
+            ],
+            [
+              { src: P("q1p3-dx.png"), title: "DoG Response ∂I/∂x" },
+              { src: P("q1p3-dy.png"), title: "DoG Response ∂I/∂y" },
+            ],
+            [
+              {
+                src: P("q1p3-gradient-DoGfilter.png"),
+                title: "Gradient Magnitude (DoG)",
+              },
+              {
+                src: P("q1p3-gradient-regularfilter.png"),
+                title: "Gradient Magnitude (regular)",
+              },
+            ],
+            [
+              {
+                src: P("q1p3-gradient-binarized-DoGfilter.png"),
+                title: "Binarized Gradient Magnitude (DoG)",
+              },
+              {
+                src: P("q1p3-gradient-binarized-regularfilter.png"),
+                title: "Binarized Gradient Magnitude ",
+              },
+            ],
+          ],
+        },
+      ];
+
+      // Q2.1 — Sharpening
+      const G21 = [
+        {
+          label: "Unsharp Masking — Taj",
+          inputs: [{ src: P("q2p1-taj.jpg"), title: "Input (Taj)" }],
+          outputs: [
+            [
+              {
+                src: P("q2p1-taj.jpg-blurred.png"),
+                title: "Low Frequency (computed by blurring)",
+              },
+              {
+                src: P("q2p1-taj.jpg-highfreq.png"),
+                title: "High-frequency residual",
+              },
+            ],
+            [
+              {
+                src: P("q2p1-taj.jpg-sharpened-alpha1.png"),
+                title: "Sharpened (alpha=1)",
+              },
+              {
+                src: P("q2p1-taj.jpg-sharpened-alpha3.png"),
+                title: "Sharpened (alpha=3)",
+              },
+              {
+                src: P("q2p1-taj.jpg-sharpened-alpha5.png"),
+                title: "Sharpened (alpha=5)",
+              },
+            ],
+          ],
+        },
+        {
+          label: "Regular Waterfall Sharpened",
+          inputs: [
+            { src: P("q2p1-waterfall.png"), title: "Input (Waterfall)" },
+          ],
+          outputs: [
+            [
+              {
+                src: P("q2p1-waterfall.png-blurred.png"),
+                title: "Low Frequency (computed by blurring)",
+              },
+              {
+                src: P("q2p1-waterfall.png-highfreq.png"),
+                title: "High-frequency residual",
+              },
+            ],
+            [
+              {
+                src: P("q2p1-waterfall.png-sharpened-alpha1.png"),
+                title: "Sharpened (alpha=1)",
+              },
+              {
+                src: P("q2p1-waterfall.png-sharpened-alpha3.png"),
+                title: "Sharpened (alpha=3)",
+              },
+              {
+                src: P("q2p1-waterfall.png-sharpened-alpha5.png"),
+                title: "Sharpened (alpha=5)",
+              },
+            ],
+          ],
+        },
+        {
+          label: "Blurred Waterfall then Sharpened",
+          inputs: [
+            {
+              src: P("q2p1-waterfall-blurred.png"),
+              title: "Blurred Waterfall",
+            },
+          ],
+          outputs: [
+            [
+              {
+                src: P("q2p1-waterfall-blurred.png-blurred.png"),
+                title: "Low Frequency (computed by blurring)",
+              },
+              {
+                src: P("q2p1-waterfall-blurred.png-highfreq.png"),
+                title: "High-frequency residual",
+              },
+            ],
+            [
+              {
+                src: P("q2p1-waterfall-blurred.png-sharpened-alpha3.png"),
+                title: "Sharpened (alpha=3)",
+              },
+            ],
+          ],
+        },
+      ];
+
+      // Q2.2 — Hybrids
+      const G22 = [
+        {
+          label: "Cat (Nutmeg) ↔ Derek",
+          inputs: [
+            { src: P("q2p2-cat.jpg"), title: "Cat" },
+            { src: P("q2p2-derek.jpg"), title: "Derek" },
+          ],
+          outputs: [
+            [{ src: P("q2p2-catderek.png"), title: "Hybrid: Cat ↔ Derek" }],
+          ],
+        },
+        {
+          label: "Dog ↔ Muffin",
+          inputs: [
+            { src: P("q2p2-dog.png"), title: "Dog" },
+            { src: P("q2p2-muffin.png"), title: "Muffin" },
+          ],
+          outputs: [
+            [{ src: P("q2p2-dogmuffin.png"), title: "Hybrid: Dog ↔ Muffin" }],
+          ],
+        },
+        {
+          label: "Guy (Happy) ↔ Guy (Angry)",
+          inputs: [
+            { src: P("q2p2-guyhappy.png"), title: "Happy" },
+            { src: P("q2p2-guyangry.png"), title: "Angry" },
+          ],
+          outputs: [
+            [
+              {
+                src: P("q2p2-guyhappyguyangry.png"),
+                title: "Hybrid: Happy ↔ Angry",
+              },
+            ],
+          ],
+        },
+        {
+          label: "Me ↔ Federer (with spectra)",
+          inputs: [
+            { src: P("q2p2-me.png"), title: "Me" },
+            { src: P("q2p2-federer.png"), title: "Federer" },
+          ],
+          outputs: [
+            [
+              {
+                src: P("q2p2-me-aligned.png"),
+                title: "Me (Aligned)",
+              },
+              {
+                src: P("q2p2-federer-aligned.png"),
+                title: "Federer (Aligned)",
+              },
+            ],
+            [
+              {
+                src: P("q2p2-mefederer.png"),
+                title: "Hybrid Output: Me ↔ Federer",
+              },
+            ],
+            [
+              {
+                src: P("q2p2-federer-spectrum.png"),
+                title: "Federer — Spectrum (full)",
+              },
+              {
+                src: P("q2p2-federer-spectrum-lowfreq.png"),
+                title: "Federer — Low frequencies",
+              },
+
+              { src: P("q2p2-me-spectrum.png"), title: "Me — Spectrum (full)" },
+              {
+                src: P("q2p2-me-spectrum-highfreq.png"),
+                title: "Me — High frequencies",
+              },
+              {
+                src: P("q2p2-mefederer.pngblended-spectrum.png"),
+                title: "Blended Spectrum (Me↔Federer)",
+              },
+            ],
+          ],
+        },
+      ];
+
+      // Q2.3 — Pyramid blending
+      const G23 = [
+        {
+          label: "Apple ↔ Orange (Oraple)",
+          note: "Rows: m Gaussian stacks, Laplacian stacks, then masked layers for selected octaves, then summed outputs.",
+          inputs: [
+            { src: P("q2p3-apple.jpeg"), title: "Apple" },
+            { src: P("q2p3-orange.jpeg"), title: "Orange" },
+          ],
+          outputs: [
+            [
+              {
+                src: P("q2p3-gaussianstack-level0-masked_apple.png"),
+                title: "Gaussian L0 — Apple",
+              },
+              {
+                src: P("q2p3-gaussianstack-level1-masked_apple.png"),
+                title: "Gaussian L1 — Apple",
+              },
+              {
+                src: P("q2p3-gaussianstack-level2-masked_apple.png"),
+                title: "Gaussian L2 — Apple",
+              },
+              {
+                src: P("q2p3-gaussianstack-level3-masked_apple.png"),
+                title: "Gaussian L3 — Apple",
+              },
+              {
+                src: P("q2p3-gaussianstack-level4-masked_apple.png"),
+                title: "Gaussian L4 — Apple",
+              },
+            ],
+            [
+              {
+                src: P("q2p3-gaussianstack-level0-masked_orange.png"),
+                title: "Gaussian L0 — Orange",
+              },
+              {
+                src: P("q2p3-gaussianstack-level1-masked_orange.png"),
+                title: "Gaussian L1 — Orange",
+              },
+              {
+                src: P("q2p3-gaussianstack-level2-masked_orange.png"),
+                title: "Gaussian L2 — Orange",
+              },
+              {
+                src: P("q2p3-gaussianstack-level3-masked_orange.png"),
+                title: "Gaussian L3 — Orange",
+              },
+              {
+                src: P("q2p3-gaussianstack-level4-masked_orange.png"),
+                title: "Gaussian L4 — Orange",
+              },
+            ],
+            [
+              {
+                src: P("q2p3-laplacianstack-level0-masked_apple.png"),
+                title: "Laplacian L0 — Apple",
+              },
+              {
+                src: P("q2p3-laplacianstack-level1-masked_apple.png"),
+                title: "Laplacian L1 — Apple",
+              },
+              {
+                src: P("q2p3-laplacianstack-level2-masked_apple.png"),
+                title: "Laplacian L2 — Apple",
+              },
+              {
+                src: P("q2p3-laplacianstack-level3-masked_apple.png"),
+                title: "Laplacian L3 — Apple",
+              },
+              {
+                src: P("q2p3-laplacianstack-level4-masked_apple.png"),
+                title: "Laplacian L4 — Apple. The Gaussian Residual.",
+              },
+            ],
+            [
+              {
+                src: P("q2p3-laplacianstack-level0-masked_orange.png"),
+                title: "Laplacian L0 — Orange",
+              },
+              {
+                src: P("q2p3-laplacianstack-level1-masked_orange.png"),
+                title: "Laplacian L1 — Orange",
+              },
+              {
+                src: P("q2p3-laplacianstack-level2-masked_orange.png"),
+                title: "Laplacian L2 — Orange",
+              },
+              {
+                src: P("q2p3-laplacianstack-level3-masked_orange.png"),
+                title: "Laplacian L3 — Orange",
+              },
+              {
+                src: P("q2p3-laplacianstack-level4-masked_orange.png"),
+                title: "Laplacian L4 — Orange. The Gaussian Residual.",
+              },
+            ],
+            [
+              {
+                src: P("q2p3-level0-masked_apple.png"),
+                title: "Level 0 — Masked Apple",
+              },
+              {
+                src: P("q2p3-level0-masked_orange.png"),
+                title: "Level 0 — Masked Orange",
+              },
+              { src: P("q2p3-level0-blended.png"), title: "Level 0 — Blended" },
+            ],
+
+            [
+              {
+                src: P("q2p3-level2-masked_apple.png"),
+                title: "Level 2 — Masked Apple",
+              },
+              {
+                src: P("q2p3-level2-masked_orange.png"),
+                title: "Level 2 — Masked Orange",
+              },
+              { src: P("q2p3-level2-blended.png"), title: "Level 2 — Blended" },
+            ],
+            [
+              {
+                src: P("q2p3-level4-masked_apple.png"),
+                title: "Level 4 — Masked Apple",
+              },
+              {
+                src: P("q2p3-level4-masked_orange.png"),
+                title: "Level 4 — Masked Orange",
+              },
+              { src: P("q2p3-level4-blended.png"), title: "Level 4 — Blended" },
+            ],
+            [
+              {
+                src: P("q2p3-summed-masked_apples.png"),
+                title: "Summed Masked Apple Across Levels",
+              },
+              {
+                src: P("q2p3-summed-masked_oranges.png"),
+                title: "Summed Masked Orange Across Levels",
+              },
+              { src: P("q2p3-appleorange.png"), title: "Final Blend: Oraple" },
+            ],
+          ],
+        },
+        {
+          label: "Cow ↔ Horse",
+          inputs: [
+            { src: P("q2p3-cow.jpg"), title: "Cow" },
+            { src: P("q2p3-horse.jpg"), title: "Horse" },
+          ],
+          outputs: [
+            [{ src: P("q2p3-cowhorse.png"), title: "Final Blend: Cow-Horse" }],
+          ],
+        },
+        {
+          label: "Eye ↔ Me",
+          inputs: [
+            [
+              { src: P("q2p3-eye.jpg"), title: "Eye" },
+              {
+                src: P("q2p3-eye-mask.png"),
+                title: "Eye Mask (irregular)",
+              },
+              { src: P("q2p3-me.jpg"), title: "Me" },
+            ],
+          ],
+          outputs: [
+            [{ src: P("q2p3-eyeme.png"), title: "Final Blend: Eye ↔ Me" }],
+          ],
+        },
+      ];
+
+      // ----------------------------
+      // Boot (render)
+      // ----------------------------
+      (function init() {
+        buildGrouped(document.getElementById("q1p1-grid"), G11);
+        buildGrouped(document.getElementById("q1p2-grid"), G12);
+        buildGrouped(document.getElementById("q1p3-grid"), G13);
+        buildGrouped(document.getElementById("q2p1-grid"), G21);
+        buildGrouped(document.getElementById("q2p2-grid"), G22);
+        buildGrouped(document.getElementById("q2p3-grid"), G23);
+      })();
+    </script>
+  </body>
+</html>
