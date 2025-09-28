@@ -474,6 +474,13 @@ def convolve_faster(img, filter_arr):
           without creating a step.
         </p>
         <p>
+          For the apple-orange and cow↔horse blends I start from the classic
+          half-bright, half-dark vertical mask, which recreates the paper’s
+          straight cut before the pyramid smooths it. The eye↔me example swaps
+          in the hand-drawn elliptical mask so the transplant fades softly
+          around the eyelids.
+        </p>
+        <p>
           During blending, every Laplacian level is combined as
           <code>mask · A + (1-mask) · B</code>, and the mask itself is blurred
           at each level with the same σ = 5, 31×31 Gaussian to feather the seam.
@@ -1014,6 +1021,7 @@ def convolve_faster(img, filter_arr):
                 title: "Laplacian L4 — Apple. The Gaussian Residual.",
               },
             ],
+
             [
               {
                 src: P("q2p3-laplacianstack-level0-masked_orange.png"),
@@ -1034,6 +1042,13 @@ def convolve_faster(img, filter_arr):
               {
                 src: P("q2p3-laplacianstack-level4-masked_orange.png"),
                 title: "Laplacian L4 — Orange. The Gaussian Residual.",
+              },
+            ],
+            [
+              {
+                src: P("q2p3-apple-mask.png"),
+                title:
+                  "Mask (Left Half Is Fully White, Right Half Is Fully Black)",
               },
             ],
             [
