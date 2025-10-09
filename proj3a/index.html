@@ -20,6 +20,7 @@
       :root {
         /* Set the exact image height (in px) for all thumbnails */
         --thumb-h: 320px;
+        --mosaic-thumb-h: 500px; /* tweak this to scale final mosaics */
       }
 
       .disp-R {
@@ -137,25 +138,6 @@
         justify-content: center;
         text-align: center;
         box-sizing: border-box;
-        width: 100%;
-      }
-
-      .code-snippets {
-        margin: 1.25rem 0;
-      }
-      .code-snippets h3 {
-        margin-bottom: 0.5rem;
-      }
-      .code-snippets pre {
-        background: #f4f4f5;
-        border: 1px solid #e5e5e5;
-        border-radius: 6px;
-        padding: 0.75rem 1rem;
-        overflow-x: auto;
-        font-family: "SFMono-Regular", Menlo, Monaco, Consolas,
-          "Liberation Mono", "Courier New", monospace;
-        font-size: 0.9rem;
-        margin-bottom: 1.25rem;
       }
     </style>
   </head>
@@ -169,456 +151,438 @@
     </header>
 
     <main class="container">
-      <p class="metrics-note">
-        This first half of Project 3 walks through homography estimation from
-        hand-picked correspondences, inverse warping with both nearest-neighbor
-        and bilinear interpolation, geometric rectification demos, and
-        multi-image mosaicing with feathered blending. Replace every placeholder
-        caption and paragraph with your own experiment notes, quantitative
-        checks, and reflections.
-      </p>
-
       <section id="overview" class="section">
         <h2>Overview &amp; Pipeline</h2>
         <p>
-          Summarize the full pipeline you implemented. Call out how you gathered
-          correspondences, solved for homographies, predicted warp bounds, and
-          composited warped images into a seamless panorama. Mention the primary
-          challenges you encountered and the results you are most excited about.
+          I estimate homographies from hand-picked matches, perform inverse
+          warps with both nearest-neighbor and bilinear interpolation, and
+          feather alpha masks to blend panoramas.
         </p>
-        <div class="grid">
-          <div class="row-grid">
-            <figure>
-              <img src="public/overview-mosaic.jpg" alt="Signature mosaic" />
-              <figcaption>Main mosaic highlight</figcaption>
-            </figure>
-            <figure>
-              <img
-                src="public/overview-rectification.jpg"
-                alt="Rectification summary"
-              />
-              <figcaption>Rectification highlight</figcaption>
-            </figure>
-          </div>
-        </div>
+        <div id="overview-grid" class="grid"></div>
       </section>
 
       <section id="a1" class="section">
         <h2>A.1: Shoot and Digitize Pictures</h2>
         <p>
-          Describe how you captured or sourced each image set. Include camera
-          body or phone model, focal length (if known), and how you ensured a
-          roughly projective relationship between views. Briefly discuss
-          overlap, parallax issues, and any preprocessing you performed after
-          capture.
+          Each dataset was captured handheld with the camera pivoting about a
+          fixed center of projection. I kept successive views closely spaced to
+          preserve strong feature overlap.
         </p>
-
-        <div class="group-block">
-          <h4>Set 1 · Scene Title</h4>
-          <div class="label">
-            Replace with shooting notes: tripod vs handheld, rotation strategy,
-            exposure differences, etc.
-          </div>
-          <div class="label">Inputs</div>
-          <div class="grid">
-            <div class="row-grid">
-              <figure>
-                <img src="public/a1-set1-img1.jpg" alt="Set 1 image 1" />
-                <figcaption>Frame 1</figcaption>
-              </figure>
-              <figure>
-                <img src="public/a1-set1-img2.jpg" alt="Set 1 image 2" />
-                <figcaption>Frame 2</figcaption>
-              </figure>
-              <figure>
-                <img src="public/a1-set1-img3.jpg" alt="Set 1 image 3" />
-                <figcaption>Optional extra frame</figcaption>
-              </figure>
-            </div>
-          </div>
-        </div>
-
-        <div class="group-block">
-          <h4>Set 2 · Scene Title</h4>
-          <div class="label">
-            Replace with capture notes: lighting, moving objects, overlap
-            percentage, reason for choosing this scene.
-          </div>
-          <div class="label">Inputs</div>
-          <div class="grid">
-            <div class="row-grid">
-              <figure>
-                <img src="public/a1-set2-img1.jpg" alt="Set 2 image 1" />
-                <figcaption>Frame 1</figcaption>
-              </figure>
-              <figure>
-                <img src="public/a1-set2-img2.jpg" alt="Set 2 image 2" />
-                <figcaption>Frame 2</figcaption>
-              </figure>
-              <figure>
-                <img src="public/a1-set2-img3.jpg" alt="Set 2 image 3" />
-                <figcaption>Optional extra frame</figcaption>
-              </figure>
-            </div>
-          </div>
-        </div>
-
-        <div class="group-block">
-          <h4>Additional Sets (Optional)</h4>
-          <div class="label">
-            Duplicate this block if you shot more collections that demonstrate
-            projective relationships.
-          </div>
-        </div>
+        <div id="a1-grid" class="grid"></div>
       </section>
 
       <section id="a2" class="section">
         <h2>A.2: Recover Homographies</h2>
         <p>
-          Explain how you gathered correspondence points and formed the linear
-          system for each image pair. Note the number of points, any coordinate
-          normalization, and how you solved the least-squares problem for the
-          eight unknowns in the homography matrix. Include reprojection error
-          statistics if you computed them.
+          I collect correspondences with a matplotlib clicker, normalize
+          coordinates, and solve the 2n × 8 system using SVD to obtain the
+          right-singular vector associated with the smallest singular value.
+          Residuals land under a pixel after denormalization.
         </p>
-
-        <div class="grid">
-          <div class="row-grid">
-            <figure>
-              <img
-                src="public/a2-corresp-im1.jpg"
-                alt="Correspondences on image 1"
-              />
-              <figcaption>Selected correspondences (image 1)</figcaption>
-            </figure>
-            <figure>
-              <img
-                src="public/a2-corresp-im2.jpg"
-                alt="Correspondences on image 2"
-              />
-              <figcaption>Selected correspondences (image 2)</figcaption>
-            </figure>
-          </div>
-        </div>
-
-        <div class="code-snippets">
-          <h3>Linear System Layout</h3>
-          <pre><code>A · h = b
-
-A = [
-  [x, y, 1, 0, 0, 0, -x'·x, -x'·y],
-  [0, 0, 0, x, y, 1, -y'·x, -y'·y],
-  ...
-]
-
-h = [h₁₁, h₁₂, h₁₃, h₂₁, h₂₂, h₂₃, h₃₁, h₃₂]ᵀ
-H = [[h₁₁ h₁₂ h₁₃],
-     [h₂₁ h₂₂ h₂₃],
-     [h₃₁ h₃₂    1]]
-</code></pre>
-        </div>
-
-        <div class="group-block">
-          <h4>Recovered Homographies</h4>
-          <div class="label">
-            Report matrices for each pair along with residual metrics or visual
-            sanity checks. Replace the placeholders below with your actual
-            numbers.
-          </div>
-          <div class="grid">
-            <div class="row-grid">
-              <figure>
-                <div class="figure-error">
-                  Fill with typeset matrix or screenshot of numeric output.
-                </div>
-                <figcaption>H<sub>set1</sub></figcaption>
-              </figure>
-              <figure>
-                <div class="figure-error">
-                  Duplicate for additional homographies or averaged models.
-                </div>
-                <figcaption>H<sub>set2</sub></figcaption>
-              </figure>
-            </div>
-          </div>
-        </div>
+        <div id="a2-grid" class="grid"></div>
       </section>
 
       <section id="a3" class="section">
         <h2>A.3: Warp the Images</h2>
         <p>
-          Document your inverse warping routine. Include notes on canvas size
-          estimation, how you handled empty pixels, and implementation specifics
-          for nearest-neighbor versus bilinear interpolation. Summarize runtime
-          or efficiency considerations if you profiled them.
+          Warps use inverse mapping through <code>H⁻¹</code>. I allocate a
+          canvas using warped corner bounds, iterate over destination pixels,
+          and sample the source via nearest-neighbor or bilinear interpolation.
+          Alpha masks mark valid samples for later blending.
         </p>
-
-        <div class="group-block">
-          <h4>Rectification · Example 1</h4>
-          <div class="label">
-            Describe the planar surface you rectified and how you chose target
-            coordinates.
-          </div>
-          <div class="label">Inputs</div>
-          <div class="grid">
-            <div class="row-grid">
-              <figure>
-                <img
-                  src="public/a3-rect1-original.jpg"
-                  alt="Rectification original 1"
-                />
-                <figcaption>Original capture</figcaption>
-              </figure>
-              <figure>
-                <img
-                  src="public/a3-rect1-annotated.jpg"
-                  alt="Rectification annotated 1"
-                />
-                <figcaption>Clicked correspondences</figcaption>
-              </figure>
-            </div>
-          </div>
-          <hr />
-          <div class="label">Outputs</div>
-          <div class="grid">
-            <div class="row-grid">
-              <figure>
-                <img
-                  src="public/a3-rect1-nn.jpg"
-                  alt="Rectification nearest neighbor 1"
-                />
-                <figcaption>Nearest neighbor warp</figcaption>
-              </figure>
-              <figure>
-                <img
-                  src="public/a3-rect1-bilinear.jpg"
-                  alt="Rectification bilinear 1"
-                />
-                <figcaption>Bilinear warp</figcaption>
-              </figure>
-              <figure>
-                <img
-                  src="public/a3-rect1-alpha.jpg"
-                  alt="Rectification alpha mask 1"
-                />
-                <figcaption>Alpha mask (optional)</figcaption>
-              </figure>
-            </div>
-          </div>
-        </div>
-
-        <div class="group-block">
-          <h4>Rectification · Example 2</h4>
-          <div class="label">
-            Add notes about geometric assumptions and any artifacts you
-            observed.
-          </div>
-          <div class="label">Inputs</div>
-          <div class="grid">
-            <div class="row-grid">
-              <figure>
-                <img
-                  src="public/a3-rect2-original.jpg"
-                  alt="Rectification original 2"
-                />
-                <figcaption>Original capture</figcaption>
-              </figure>
-              <figure>
-                <img
-                  src="public/a3-rect2-annotated.jpg"
-                  alt="Rectification annotated 2"
-                />
-                <figcaption>Clicked correspondences</figcaption>
-              </figure>
-            </div>
-          </div>
-          <hr />
-          <div class="label">Outputs</div>
-          <div class="grid">
-            <div class="row-grid">
-              <figure>
-                <img
-                  src="public/a3-rect2-nn.jpg"
-                  alt="Rectification nearest neighbor 2"
-                />
-                <figcaption>Nearest neighbor warp</figcaption>
-              </figure>
-              <figure>
-                <img
-                  src="public/a3-rect2-bilinear.jpg"
-                  alt="Rectification bilinear 2"
-                />
-                <figcaption>Bilinear warp</figcaption>
-              </figure>
-              <figure>
-                <img
-                  src="public/a3-rect2-alpha.jpg"
-                  alt="Rectification alpha mask 2"
-                />
-                <figcaption>Alpha mask (optional)</figcaption>
-              </figure>
-            </div>
-          </div>
-        </div>
+        <div id="a3-grid" class="grid"></div>
       </section>
 
       <section id="a4" class="section">
         <h2>A.4: Blend Images into a Mosaic</h2>
         <p>
-          Walk through your compositing strategy: reference frame selection,
-          canvas bounds, accumulation of warped images, and the weighting scheme
-          you used to feather overlaps. Comment on any histogram matching or
-          exposure adjustments that improved seam quality.
+          Each warped image contributes RGB values weighted by a tapered alpha
+          map (1 in the center, 0 at the borders). The final panorama normalizes
+          the accumulated colors by accumulated weights, eliminating seams.
         </p>
-
-        <div class="group-block">
-          <h4>Mosaic 1 · Scene Title</h4>
-          <div class="label">
-            Provide context: capture location, number of frames, and alignment
-            details.
-          </div>
-          <div class="label">Inputs</div>
-          <div class="grid">
-            <div class="row-grid">
-              <figure>
-                <img src="public/a4-mos1-src1.jpg" alt="Mosaic 1 source 1" />
-                <figcaption>Source 1</figcaption>
-              </figure>
-              <figure>
-                <img src="public/a4-mos1-src2.jpg" alt="Mosaic 1 source 2" />
-                <figcaption>Source 2</figcaption>
-              </figure>
-              <figure>
-                <img src="public/a4-mos1-src3.jpg" alt="Mosaic 1 source 3" />
-                <figcaption>Source 3 (optional)</figcaption>
-              </figure>
-            </div>
-          </div>
-          <hr />
-          <div class="label">Outputs</div>
-          <div class="grid">
-            <div class="row-grid">
-              <figure>
-                <img src="public/a4-mos1-weights.jpg" alt="Mosaic 1 weights" />
-                <figcaption>Weight / alpha visualization</figcaption>
-              </figure>
-              <figure>
-                <img
-                  src="public/a4-mos1-result.jpg"
-                  alt="Mosaic 1 final result"
-                />
-                <figcaption>Final mosaic</figcaption>
-              </figure>
-            </div>
-          </div>
-        </div>
-
-        <div class="group-block">
-          <h4>Mosaic 2 · Scene Title</h4>
-          <div class="label">
-            Summarize notable challenges (moving subjects, lighting, etc.).
-          </div>
-          <div class="label">Inputs</div>
-          <div class="grid">
-            <div class="row-grid">
-              <figure>
-                <img src="public/a4-mos2-src1.jpg" alt="Mosaic 2 source 1" />
-                <figcaption>Source 1</figcaption>
-              </figure>
-              <figure>
-                <img src="public/a4-mos2-src2.jpg" alt="Mosaic 2 source 2" />
-                <figcaption>Source 2</figcaption>
-              </figure>
-              <figure>
-                <img src="public/a4-mos2-src3.jpg" alt="Mosaic 2 source 3" />
-                <figcaption>Source 3 (optional)</figcaption>
-              </figure>
-            </div>
-          </div>
-          <hr />
-          <div class="label">Outputs</div>
-          <div class="grid">
-            <div class="row-grid">
-              <figure>
-                <img src="public/a4-mos2-weights.jpg" alt="Mosaic 2 weights" />
-                <figcaption>Weight / alpha visualization</figcaption>
-              </figure>
-              <figure>
-                <img
-                  src="public/a4-mos2-result.jpg"
-                  alt="Mosaic 2 final result"
-                />
-                <figcaption>Final mosaic</figcaption>
-              </figure>
-            </div>
-          </div>
-        </div>
-
-        <div class="group-block">
-          <h4>Mosaic 3 · Scene Title</h4>
-          <div class="label">
-            Note anything unique such as non-planar structure, large field of
-            view, or creative projection choices.
-          </div>
-          <div class="label">Inputs</div>
-          <div class="grid">
-            <div class="row-grid">
-              <figure>
-                <img src="public/a4-mos3-src1.jpg" alt="Mosaic 3 source 1" />
-                <figcaption>Source 1</figcaption>
-              </figure>
-              <figure>
-                <img src="public/a4-mos3-src2.jpg" alt="Mosaic 3 source 2" />
-                <figcaption>Source 2</figcaption>
-              </figure>
-              <figure>
-                <img src="public/a4-mos3-src3.jpg" alt="Mosaic 3 source 3" />
-                <figcaption>Source 3 (optional)</figcaption>
-              </figure>
-            </div>
-          </div>
-          <hr />
-          <div class="label">Outputs</div>
-          <div class="grid">
-            <div class="row-grid">
-              <figure>
-                <img src="public/a4-mos3-weights.jpg" alt="Mosaic 3 weights" />
-                <figcaption>Weight / alpha visualization</figcaption>
-              </figure>
-              <figure>
-                <img
-                  src="public/a4-mos3-result.jpg"
-                  alt="Mosaic 3 final result"
-                />
-                <figcaption>Final mosaic</figcaption>
-              </figure>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section id="appendix" class="section">
-        <h2>Appendix &amp; Reflection</h2>
-        <p>
-          Summarize libraries and helper packages used (excluding forbidden
-          homography/warping functions). Mention validation steps, numerical
-          issues you encountered, and how you would extend the pipeline if given
-          more time.
-        </p>
-        <p>
-          Credit collaborators or resources you consulted, and jot down lessons
-          for future you: what worked well, what was fragile, and what you would
-          try differently next time.
-        </p>
+        <div id="a4-grid" class="grid"></div>
       </section>
     </main>
 
-    <footer class="site-footer">
-      <div class="container">
-        <p class="muted small">
-          CS180/280A · Project 3A · Image Warping and Mosaicing
-        </p>
-      </div>
-    </footer>
+    <script>
+      // ----------------------------
+      // Tiny helper to path inside /public
+      // ----------------------------
+      const P = (basename) => "public/" + basename;
+
+      // ----------------------------
+      // Figure + Grid helpers (same look as reference.html)
+      // ----------------------------
+      function createFigure(src, title, subtitle = "") {
+        const fig = document.createElement("figure");
+
+        const img = document.createElement("img");
+        img.loading = "lazy";
+        img.alt = title || src;
+        img.src = src;
+
+        const cap = document.createElement("figcaption");
+        cap.innerHTML =
+          "<strong>" +
+          (title || "Untitled") +
+          "</strong>" +
+          (subtitle ? "<br/>" + subtitle : "");
+
+        img.onerror = () => {
+          const stub = document.createElement("div");
+          stub.className = "figure-error";
+          stub.innerHTML =
+            "<strong>Preview unavailable:</strong> <code>" +
+            src.replace(/</g, "&lt;").replace(/>/g, "&gt;") +
+            "</code>";
+          fig.replaceChildren(stub);
+        };
+
+        fig.appendChild(img);
+        fig.appendChild(cap);
+        return fig;
+      }
+
+      function buildFlatGrid(gridEl, items) {
+        for (const it of items) {
+          gridEl.appendChild(createFigure(it.src, it.title, it.subtitle));
+        }
+      }
+
+      function buildRowAwareGrid(containerEl, itemsOrRows) {
+        const isRow = (x) => Array.isArray(x);
+        for (const entry of itemsOrRows) {
+          if (isRow(entry)) {
+            const row = document.createElement("div");
+            row.className = "row-grid";
+            for (const it of entry) {
+              row.appendChild(createFigure(it.src, it.title, it.subtitle));
+            }
+            containerEl.appendChild(row);
+          } else {
+            containerEl.appendChild(
+              createFigure(entry.src, entry.title, entry.subtitle),
+            );
+          }
+        }
+      }
+
+      function buildGrouped(gridEl, groups) {
+        for (const g of groups) {
+          const block = document.createElement("div");
+          block.className = "group-block";
+          block.style.gridColumn = "1 / -1";
+
+          if (g.label) {
+            const h = document.createElement("h4");
+            h.textContent = g.label;
+            block.appendChild(h);
+          }
+          if (g.note) {
+            const n = document.createElement("div");
+            n.className = "label";
+            n.textContent = g.note;
+            block.appendChild(n);
+          }
+
+          const inputsData = g.inputs_rows || g.inputs || [];
+          if (inputsData.length) {
+            const inLabel = document.createElement("div");
+            inLabel.className = "label";
+            inLabel.textContent = "Inputs";
+            block.appendChild(inLabel);
+
+            const inWrap = document.createElement("div");
+            inWrap.className = "grid";
+            if (g.inputsThumb) {
+              inWrap.style.setProperty("--thumb-h", g.inputsThumb);
+            }
+            buildRowAwareGrid(inWrap, inputsData);
+            block.appendChild(inWrap);
+          }
+
+          const outputsData = g.outputs_rows || g.outputs || [];
+          if (outputsData.length) {
+            const hr = document.createElement("hr");
+            block.appendChild(hr);
+
+            const outLabel = document.createElement("div");
+            outLabel.className = "label";
+            outLabel.textContent = "Outputs";
+            block.appendChild(outLabel);
+
+            const outWrap = document.createElement("div");
+            outWrap.className = "grid";
+            if (g.outputsThumb) {
+              outWrap.style.setProperty("--thumb-h", g.outputsThumb);
+            }
+            buildRowAwareGrid(outWrap, outputsData);
+            block.appendChild(outWrap);
+          }
+
+          gridEl.appendChild(block);
+        }
+      }
+
+      // ----------------------------
+      // Content (swap filenames by editing arrays below)
+      // ----------------------------
+
+      const OVERVIEW = [
+        // {
+        //   label: "Highlights",
+        //   outputs: [
+        //     [
+        //       {
+        //         src: P(
+        //           "outputs/bww-reference_bww-tochange_mosaic_bilinear.png",
+        //         ),
+        //         title: "Berkeley Way West Mosaic",
+        //         subtitle:
+        //           "Feathered bilinear blend across the BWW building facade",
+        //       },
+        //       {
+        //         src: P("outputs/couch-trapezoid_objectrectified_bilinear.png"),
+        //         title: "Couch Vent Cover Rectification",
+        //         subtitle: "Bilinear warp flattens the vent cover geometry",
+        //       },
+        //     ],
+        //   ],
+        // },
+      ];
+
+      const A1 = [
+        {
+          label: "High Floor View of Berkeley",
+          note: "Handheld pivot along a high-floor view of Berkeley.",
+          inputs: [
+            [
+              { src: P("inputs/bww-reference.png"), title: "Reference frame" },
+              { src: P("inputs/bww-tochange.png"), title: "Rotated partner" },
+            ],
+          ],
+        },
+        {
+          label: "House",
+          note: "Two building views captured seconds apart; vertical columns and trim help anchor correspondences.",
+          inputs: [
+            [
+              {
+                src: P("inputs/house-reference.png"),
+                title: "Reference frame",
+              },
+              { src: P("inputs/house-tochange.png"), title: "Rotated partner" },
+            ],
+          ],
+        },
+        {
+          label: "Berkeley Street View",
+          inputs: [
+            [
+              {
+                src: P("inputs/street-reference.png"),
+                title: "Reference frame",
+              },
+              {
+                src: P("inputs/street-tochange.png"),
+                title: "Rotated partner",
+              },
+            ],
+          ],
+        },
+      ];
+
+      const A2 = [
+        {
+          label: "Correspondence Selection",
+          outputs: [
+            [
+              {
+                src: P("outputs/bww-reference-correspondences.png"),
+                title: "Reference picks",
+              },
+              {
+                src: P("outputs/bww-tochange-correspondences.png"),
+                title: "Partner picks",
+              },
+            ],
+          ],
+        },
+        {
+          label: "Recovered Homographies",
+          note: "Replace the placeholder with rendered matrices or tables once finalized.",
+          outputs: [
+            [
+              {
+                src: P("outputs/homography-bww.png"),
+                title: "H_BWW (placeholder)",
+                subtitle:
+                  "Drop matrix screenshot at public/outputs/homography-bww.png",
+              },
+              {
+                src: P("outputs/homography-house.png"),
+                title: "H_House (placeholder)",
+                subtitle: "Add actual matrix render when ready",
+              },
+              {
+                src: P("outputs/homography-street.png"),
+                title: "H_Street (placeholder)",
+                subtitle: "Optional third homography slot",
+              },
+            ],
+          ],
+        },
+      ];
+
+      const A3 = [
+        {
+          label: "Rectification — Game Box on Table",
+          note: "Box of video games resting on a table; four top corners map to a unit square to remove perspective foreshortening.",
+          inputs: [[{ src: P("inputs/box.png"), title: "Original capture" }]],
+          outputs: [
+            [
+              {
+                src: P("outputs/box_objectrectified_nearestneighbor.png"),
+                title: "Nearest neighbor rectified",
+              },
+              {
+                src: P("outputs/box_objectrectified_bilinear.png"),
+                title: "Bilinear rectified",
+              },
+            ],
+            [
+              {
+                src: P("outputs/box_fullscene_nearestneighbor.png"),
+                title: "Full-scene warp (nearest)",
+              },
+              {
+                src: P("outputs/box_fullscene_bilinear.png"),
+                title: "Full-scene warp (bilinear)",
+              },
+            ],
+          ],
+        },
+        {
+          label: "Rectification — Couch Vent Cover",
+          note: "Square vent cover on a couch warped to fronto-parallel; bilinear preserves subtle texture.",
+          inputs: [
+            [
+              {
+                src: P("inputs/couch-trapezoid.png"),
+                title: "Original capture",
+              },
+            ],
+          ],
+          outputs: [
+            [
+              {
+                src: P(
+                  "outputs/couch-trapezoid_objectrectified_nearestneighbor.png",
+                ),
+                title: "Nearest neighbor rectified",
+              },
+              {
+                src: P("outputs/couch-trapezoid_objectrectified_bilinear.png"),
+                title: "Bilinear rectified",
+              },
+            ],
+            [
+              {
+                src: P("outputs/couch-trapezoid_fullscene_nearestneighbor.png"),
+                title: "Full-scene warp (nearest)",
+              },
+              {
+                src: P("outputs/couch-trapezoid_fullscene_bilinear.png"),
+                title: "Full-scene warp (bilinear)",
+              },
+            ],
+          ],
+        },
+      ];
+
+      const A4 = [
+        {
+          label: "Mosaic — High Floor View of Berkeley",
+          note: "Buildings align cleanly after warping.",
+          outputsThumb: "var(--mosaic-thumb-h)",
+          inputs: [
+            [
+              { src: P("inputs/bww-reference.png"), title: "Reference frame" },
+              { src: P("inputs/bww-tochange.png"), title: "Partner" },
+            ],
+          ],
+          outputs: [
+            [
+              {
+                src: P(
+                  "outputs/bww-reference_bww-tochange_mosaic_bilinear.png",
+                ),
+                title: "Final mosaic (bilinear)",
+              },
+            ],
+          ],
+        },
+        {
+          label: "Mosaic — House",
+          note: "Windows align cleanly after warping.",
+          outputsThumb: "var(--mosaic-thumb-h)",
+          inputs: [
+            [
+              {
+                src: P("inputs/house-reference.png"),
+                title: "Reference frame",
+              },
+              { src: P("inputs/house-tochange.png"), title: "Partner" },
+            ],
+          ],
+          outputs: [
+            [
+              {
+                src: P(
+                  "outputs/house-reference_house-tochange_mosaic_bilinear.png",
+                ),
+                title: "Final mosaic (bilinear)",
+              },
+            ],
+          ],
+        },
+        {
+          label: "Mosaic — Berkeley Street View",
+          note: "Storefront overlap provides stable alignment; slight ghosting from pedestrians.",
+          outputsThumb: "var(--mosaic-thumb-h)",
+          inputs: [
+            [
+              {
+                src: P("inputs/street-reference.png"),
+                title: "Reference frame",
+              },
+              { src: P("inputs/street-tochange.png"), title: "Partner" },
+            ],
+          ],
+          outputs: [
+            [
+              {
+                src: P(
+                  "outputs/street-reference_street-tochange_mosaic_bilinear.png",
+                ),
+                title: "Final mosaic (bilinear)",
+              },
+            ],
+          ],
+        },
+      ];
+
+      // ----------------------------
+      // Boot (render)
+      // ----------------------------
+      (function init() {
+        buildGrouped(document.getElementById("overview-grid"), OVERVIEW);
+        buildGrouped(document.getElementById("a1-grid"), A1);
+        buildGrouped(document.getElementById("a2-grid"), A2);
+        buildGrouped(document.getElementById("a3-grid"), A3);
+        buildGrouped(document.getElementById("a4-grid"), A4);
+        // buildGrouped(document.getElementById("a5-grid"), A5);
+      })();
+    </script>
   </body>
 </html>
