@@ -139,6 +139,37 @@
         text-align: center;
         box-sizing: border-box;
       }
+
+      .matrix-card {
+        width: 100%;
+        overflow-x: auto;
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
+        padding: 0.75rem;
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+      }
+
+      .matrix-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo,
+          monospace;
+      }
+
+      .matrix-table td {
+        padding: 0.35rem 0.55rem;
+        border: 1px solid #dbeafe;
+        text-align: right;
+        white-space: nowrap;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .matrix-note {
+        margin-top: 0.5rem;
+        font-size: 0.9rem;
+        opacity: 0.75;
+      }
     </style>
   </head>
   <body>
@@ -174,10 +205,10 @@
       <section id="a2" class="section">
         <h2>A.2: Recover Homographies</h2>
         <p>
-          I collect correspondences with a matplotlib clicker, normalize
-          coordinates, and solve the 2n × 8 system using SVD to obtain the
-          right-singular vector associated with the smallest singular value.
-          Residuals land under a pixel after denormalization.
+          I collect correspondences with the tool attached with the spec. I
+          solve the following system [todo:] which is in Ax=b form to obtain the
+          homography matrix. I use the [todo: method/library] to perform the
+          solve to handle instability.
         </p>
         <div id="a2-grid" class="grid"></div>
       </section>
@@ -213,39 +244,102 @@
       // ----------------------------
       // Figure + Grid helpers (same look as reference.html)
       // ----------------------------
-      function createFigure(src, title, subtitle = "") {
-        const fig = document.createElement("figure");
+      const formatMatrixValue = (raw) => {
+        const num = typeof raw === "number" ? raw : Number(raw);
+        if (!Number.isFinite(num)) {
+          return raw;
+        }
+        const abs = Math.abs(num);
+        if (abs !== 0 && (abs < 1e-3 || abs >= 1e3)) {
+          return num.toExponential(3);
+        }
+        const fixed = num.toFixed(4);
 
-        const img = document.createElement("img");
-        img.loading = "lazy";
-        img.alt = title || src;
-        img.src = src;
+        return fixed === "-0.0000" ? "0.0000" : fixed;
+      };
+
+      function renderMatrixTable(matrix) {
+        const table = document.createElement("table");
+        table.className = "matrix-table";
+        const tbody = document.createElement("tbody");
+        table.appendChild(tbody);
+
+        for (const row of matrix) {
+          const tr = document.createElement("tr");
+          for (const value of row) {
+            const td = document.createElement("td");
+            td.textContent = formatMatrixValue(value);
+            tr.appendChild(td);
+          }
+          tbody.appendChild(tr);
+        }
+
+        return table;
+      }
+
+      function createFigure(itemOrSrc, title, subtitle = "") {
+        const item =
+          typeof itemOrSrc === "object" && itemOrSrc !== null
+            ? itemOrSrc
+            : { src: itemOrSrc, title, subtitle };
+
+        const fig = document.createElement("figure");
+        const heading = item.title || "Untitled";
+        const detail = item.subtitle || "";
 
         const cap = document.createElement("figcaption");
         cap.innerHTML =
-          "<strong>" +
-          (title || "Untitled") +
-          "</strong>" +
-          (subtitle ? "<br/>" + subtitle : "");
+          "<strong>" + heading + "</strong>" + (detail ? "<br/>" + detail : "");
 
-        img.onerror = () => {
-          const stub = document.createElement("div");
-          stub.className = "figure-error";
-          stub.innerHTML =
-            "<strong>Preview unavailable:</strong> <code>" +
-            src.replace(/</g, "&lt;").replace(/>/g, "&gt;") +
-            "</code>";
-          fig.replaceChildren(stub);
-        };
+        if (Array.isArray(item.matrix)) {
+          const card = document.createElement("div");
+          card.className = "matrix-card";
+          card.appendChild(renderMatrixTable(item.matrix));
+          if (item.matrixNote) {
+            const note = document.createElement("div");
+            note.className = "matrix-note";
+            note.textContent = item.matrixNote;
+            card.appendChild(note);
+          }
+          fig.appendChild(card);
+          fig.appendChild(cap);
+          return fig;
+        }
 
-        fig.appendChild(img);
+        if (item.src) {
+          const img = document.createElement("img");
+          img.loading = "lazy";
+          img.alt = heading || item.src;
+          img.src = item.src;
+
+          img.onerror = () => {
+            const stub = document.createElement("div");
+            stub.className = "figure-error";
+            stub.innerHTML =
+              "<strong>Preview unavailable:</strong> <code>" +
+              item.src.replace(/</g, "&lt;").replace(/>/g, "&gt;") +
+              "</code>";
+            fig.replaceChildren(stub, cap);
+          };
+
+          fig.appendChild(img);
+          fig.appendChild(cap);
+          return fig;
+        }
+
+        const stub = document.createElement("div");
+        stub.className = "figure-error";
+        stub.innerHTML =
+          "<strong>Nothing to display.</strong>" +
+          (item.note ? "<br/>" + item.note : "");
+        fig.appendChild(stub);
         fig.appendChild(cap);
         return fig;
       }
 
       function buildFlatGrid(gridEl, items) {
         for (const it of items) {
-          gridEl.appendChild(createFigure(it.src, it.title, it.subtitle));
+          gridEl.appendChild(createFigure(it));
         }
       }
 
@@ -256,13 +350,11 @@
             const row = document.createElement("div");
             row.className = "row-grid";
             for (const it of entry) {
-              row.appendChild(createFigure(it.src, it.title, it.subtitle));
+              row.appendChild(createFigure(it));
             }
             containerEl.appendChild(row);
           } else {
-            containerEl.appendChild(
-              createFigure(entry.src, entry.title, entry.subtitle),
-            );
+            containerEl.appendChild(createFigure(entry));
           }
         }
       }
@@ -399,35 +491,85 @@
             [
               {
                 src: P("outputs/bww-reference-correspondences.png"),
-                title: "Reference picks",
+                title: "Reference Correspondences",
               },
               {
                 src: P("outputs/bww-tochange-correspondences.png"),
-                title: "Partner picks",
+                title: "Partner Correspondences",
+              },
+            ],
+            [
+              {
+                src: P("outputs/house-reference-correspondences.png"),
+                title: "Reference Correspondences",
+              },
+              {
+                src: P("outputs/house-tochange-correspondences.png"),
+                title: "Partner Correspondences",
+              },
+            ],
+            [
+              {
+                src: P("outputs/street-reference-correspondences.png"),
+                title: "Reference Correspondences",
+              },
+              {
+                src: P("outputs/street-tochange-correspondences.png"),
+                title: "Partner Correspondences",
               },
             ],
           ],
         },
         {
           label: "Recovered Homographies",
-          note: "Replace the placeholder with rendered matrices or tables once finalized.",
+          note: "Matrices map homogeneous points from the rotated partner back to the reference view; each is scaled so h33 = 1.",
           outputs: [
             [
               {
-                src: P("outputs/homography-bww.png"),
-                title: "H_BWW (placeholder)",
-                subtitle:
-                  "Drop matrix screenshot at public/outputs/homography-bww.png",
+                title: "H — High Floor View of Berkeley",
+                // subtitle: `Source: <a href="${P(
+                //   "outputs/bww-reference_bww-tochange_homography_matrix.txt",
+                // )}" target="_blank" rel="noopener">homography_matrix.txt</a>`,
+                matrix: [
+                  [0.7869776862917, -0.2183865812133608, 69.53075641817435],
+                  [-0.0008929768523522, 0.4381431284059411, 385.3852364367663],
+                  [-0.0000283671898821, -0.0005484332596918, 1],
+                ],
               },
+            ],
+            [
               {
-                src: P("outputs/homography-house.png"),
-                title: "H_House (placeholder)",
-                subtitle: "Add actual matrix render when ready",
+                title: "H — House",
+                // subtitle: `Source: <a href="${P(
+                //   "outputs/house-reference_house-tochange_homography_matrix.txt",
+                // )}" target="_blank" rel="noopener">homography_matrix.txt</a>`,
+                matrix: [
+                  [
+                    0.7672589591262372, -0.29182910805766604,
+                    108.16052832977991,
+                  ],
+                  [-0.0505982020432435, 0.20761754014127554, 581.517389650655],
+                  [-0.0000597789558414, -0.0007679641588066, 1],
+                ],
               },
+            ],
+            [
               {
-                src: P("outputs/homography-street.png"),
-                title: "H_Street (placeholder)",
-                subtitle: "Optional third homography slot",
+                title: "H — Berkeley Street View",
+                // subtitle: `Source: <a href="${P(
+                //   "outputs/street-reference_street-tochange_homography_matrix.txt",
+                // )}" target="_blank" rel="noopener">homography_matrix.txt</a>`,
+                matrix: [
+                  [
+                    0.6880254989374108, -0.23738467742332306,
+                    102.36570314380455,
+                  ],
+                  [
+                    -0.10394771974694368, 0.2876932989243844,
+                    475.77075158580743,
+                  ],
+                  [-0.0001492081288077, -0.0006570675830871, 1],
+                ],
               },
             ],
           ],
