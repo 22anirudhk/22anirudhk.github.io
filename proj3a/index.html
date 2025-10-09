@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>CS180/280A · Project 3A</title>
+
+    <!-- Inter (thin) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap"
+      rel="stylesheet"
+    />
+
+    <!-- Keep the exact same stylesheet -->
+    <link rel="stylesheet" href="style.css" />
+
+    <style>
+      :root {
+        /* Set the exact image height (in px) for all thumbnails */
+        --thumb-h: 320px;
+      }
+
+      .disp-R {
+        color: #e11d48;
+        font-weight: 600;
+      } /* red */
+      .disp-B {
+        color: #2563eb;
+        font-weight: 600;
+      } /* blue */
+      .metrics-note {
+        font-size: 0.95rem;
+        opacity: 0.85;
+        margin-bottom: 1rem;
+      }
+      .kicker {
+        display: none;
+      }
+
+      /* Center the grid within the container, and center items within each cell */
+      .grid {
+        margin-left: auto;
+        margin-right: auto;
+        justify-items: center;
+        align-items: center;
+      }
+
+      .grid > .row-grid {
+        grid-column: 1 / -1; /* let multi-image rows use the full width */
+        width: 100%;
+      }
+
+      .grid figure {
+        display: flex;
+        flex-direction: column;
+        align-items: center; /* center within column */
+        text-align: center; /* center caption text */
+        width: 100%;
+      }
+
+      /* ✅ Thumbnails shrink as needed but never exceed the shared max height */
+      .grid img {
+        height: auto;
+        max-height: var(--thumb-h);
+        width: auto; /* keep aspect ratio */
+        max-width: 100%; /* don't overflow narrow columns */
+        object-fit: contain; /* letterbox if needed */
+        display: block;
+      }
+
+      /* If an image can't load, keep the same visual height so rows stay even */
+      .grid .figure-error {
+        min-height: var(--thumb-h);
+        padding: 1rem;
+        border: 1px dashed #ddd;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        box-sizing: border-box;
+        width: 100%;
+      }
+
+      /* Minimal, non-invasive group layout (no style changes to existing classes) */
+      .group-block {
+        width: 100%;
+      }
+      .group-block h4 {
+        margin: 0.75rem 0 0.5rem;
+      }
+      .group-block .label {
+        opacity: 0.8;
+        margin: 0.25rem 0 0.5rem;
+        font-size: 0.95rem;
+      }
+      .group-block hr {
+        border: none;
+        border-top: 1px solid #eee;
+        margin: 0.75rem 0;
+      }
+
+      /* explicit same-row layout without touching external stylesheet */
+      .row-grid {
+        display: flex;
+        gap: 0.9rem;
+        justify-content: center;
+        align-items: flex-start;
+        overflow-x: auto; /* keep items on one line; scroll on narrow screens */
+        padding-bottom: 0.25rem; /* room for scrollbar */
+      }
+      .row-grid figure {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        flex: 1 1 220px; /* prefer moderate width, shrink if needed */
+        min-width: 0; /* allow flexbox to shrink below intrinsic width */
+      }
+      .row-grid img {
+        height: auto;
+        max-height: var(--thumb-h);
+        width: auto;
+        max-width: 100%;
+        object-fit: contain;
+        display: block;
+      }
+      .row-grid .figure-error {
+        min-height: var(--thumb-h);
+        padding: 1rem;
+        border: 1px dashed #ddd;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        box-sizing: border-box;
+        width: 100%;
+      }
+
+      .code-snippets {
+        margin: 1.25rem 0;
+      }
+      .code-snippets h3 {
+        margin-bottom: 0.5rem;
+      }
+      .code-snippets pre {
+        background: #f4f4f5;
+        border: 1px solid #e5e5e5;
+        border-radius: 6px;
+        padding: 0.75rem 1rem;
+        overflow-x: auto;
+        font-family: "SFMono-Regular", Menlo, Monaco, Consolas,
+          "Liberation Mono", "Courier New", monospace;
+        font-size: 0.9rem;
+        margin-bottom: 1.25rem;
+      }
+    </style>
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="container">
+        <h1 class="title">CS 180 Programming Project #3A</h1>
+        <h2 class="sub">Image Warping and Mosaicing</h2>
+        <h3 class="due"><span>Anirudh Kotamraju</span></h3>
+      </div>
+    </header>
+
+    <main class="container">
+      <p class="metrics-note">
+        This first half of Project 3 walks through homography estimation from
+        hand-picked correspondences, inverse warping with both nearest-neighbor
+        and bilinear interpolation, geometric rectification demos, and
+        multi-image mosaicing with feathered blending. Replace every placeholder
+        caption and paragraph with your own experiment notes, quantitative
+        checks, and reflections.
+      </p>
+
+      <section id="overview" class="section">
+        <h2>Overview &amp; Pipeline</h2>
+        <p>
+          Summarize the full pipeline you implemented. Call out how you gathered
+          correspondences, solved for homographies, predicted warp bounds, and
+          composited warped images into a seamless panorama. Mention the primary
+          challenges you encountered and the results you are most excited about.
+        </p>
+        <div class="grid">
+          <div class="row-grid">
+            <figure>
+              <img src="public/overview-mosaic.jpg" alt="Signature mosaic" />
+              <figcaption>Main mosaic highlight</figcaption>
+            </figure>
+            <figure>
+              <img
+                src="public/overview-rectification.jpg"
+                alt="Rectification summary"
+              />
+              <figcaption>Rectification highlight</figcaption>
+            </figure>
+          </div>
+        </div>
+      </section>
+
+      <section id="a1" class="section">
+        <h2>A.1: Shoot and Digitize Pictures</h2>
+        <p>
+          Describe how you captured or sourced each image set. Include camera
+          body or phone model, focal length (if known), and how you ensured a
+          roughly projective relationship between views. Briefly discuss
+          overlap, parallax issues, and any preprocessing you performed after
+          capture.
+        </p>
+
+        <div class="group-block">
+          <h4>Set 1 · Scene Title</h4>
+          <div class="label">
+            Replace with shooting notes: tripod vs handheld, rotation strategy,
+            exposure differences, etc.
+          </div>
+          <div class="label">Inputs</div>
+          <div class="grid">
+            <div class="row-grid">
+              <figure>
+                <img src="public/a1-set1-img1.jpg" alt="Set 1 image 1" />
+                <figcaption>Frame 1</figcaption>
+              </figure>
+              <figure>
+                <img src="public/a1-set1-img2.jpg" alt="Set 1 image 2" />
+                <figcaption>Frame 2</figcaption>
+              </figure>
+              <figure>
+                <img src="public/a1-set1-img3.jpg" alt="Set 1 image 3" />
+                <figcaption>Optional extra frame</figcaption>
+              </figure>
+            </div>
+          </div>
+        </div>
+
+        <div class="group-block">
+          <h4>Set 2 · Scene Title</h4>
+          <div class="label">
+            Replace with capture notes: lighting, moving objects, overlap
+            percentage, reason for choosing this scene.
+          </div>
+          <div class="label">Inputs</div>
+          <div class="grid">
+            <div class="row-grid">
+              <figure>
+                <img src="public/a1-set2-img1.jpg" alt="Set 2 image 1" />
+                <figcaption>Frame 1</figcaption>
+              </figure>
+              <figure>
+                <img src="public/a1-set2-img2.jpg" alt="Set 2 image 2" />
+                <figcaption>Frame 2</figcaption>
+              </figure>
+              <figure>
+                <img src="public/a1-set2-img3.jpg" alt="Set 2 image 3" />
+                <figcaption>Optional extra frame</figcaption>
+              </figure>
+            </div>
+          </div>
+        </div>
+
+        <div class="group-block">
+          <h4>Additional Sets (Optional)</h4>
+          <div class="label">
+            Duplicate this block if you shot more collections that demonstrate
+            projective relationships.
+          </div>
+        </div>
+      </section>
+
+      <section id="a2" class="section">
+        <h2>A.2: Recover Homographies</h2>
+        <p>
+          Explain how you gathered correspondence points and formed the linear
+          system for each image pair. Note the number of points, any coordinate
+          normalization, and how you solved the least-squares problem for the
+          eight unknowns in the homography matrix. Include reprojection error
+          statistics if you computed them.
+        </p>
+
+        <div class="grid">
+          <div class="row-grid">
+            <figure>
+              <img
+                src="public/a2-corresp-im1.jpg"
+                alt="Correspondences on image 1"
+              />
+              <figcaption>Selected correspondences (image 1)</figcaption>
+            </figure>
+            <figure>
+              <img
+                src="public/a2-corresp-im2.jpg"
+                alt="Correspondences on image 2"
+              />
+              <figcaption>Selected correspondences (image 2)</figcaption>
+            </figure>
+          </div>
+        </div>
+
+        <div class="code-snippets">
+          <h3>Linear System Layout</h3>
+          <pre><code>A · h = b
+
+A = [
+  [x, y, 1, 0, 0, 0, -x'·x, -x'·y],
+  [0, 0, 0, x, y, 1, -y'·x, -y'·y],
+  ...
+]
+
+h = [h₁₁, h₁₂, h₁₃, h₂₁, h₂₂, h₂₃, h₃₁, h₃₂]ᵀ
+H = [[h₁₁ h₁₂ h₁₃],
+     [h₂₁ h₂₂ h₂₃],
+     [h₃₁ h₃₂    1]]
+</code></pre>
+        </div>
+
+        <div class="group-block">
+          <h4>Recovered Homographies</h4>
+          <div class="label">
+            Report matrices for each pair along with residual metrics or visual
+            sanity checks. Replace the placeholders below with your actual
+            numbers.
+          </div>
+          <div class="grid">
+            <div class="row-grid">
+              <figure>
+                <div class="figure-error">
+                  Fill with typeset matrix or screenshot of numeric output.
+                </div>
+                <figcaption>H<sub>set1</sub></figcaption>
+              </figure>
+              <figure>
+                <div class="figure-error">
+                  Duplicate for additional homographies or averaged models.
+                </div>
+                <figcaption>H<sub>set2</sub></figcaption>
+              </figure>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="a3" class="section">
+        <h2>A.3: Warp the Images</h2>
+        <p>
+          Document your inverse warping routine. Include notes on canvas size
+          estimation, how you handled empty pixels, and implementation specifics
+          for nearest-neighbor versus bilinear interpolation. Summarize runtime
+          or efficiency considerations if you profiled them.
+        </p>
+
+        <div class="group-block">
+          <h4>Rectification · Example 1</h4>
+          <div class="label">
+            Describe the planar surface you rectified and how you chose target
+            coordinates.
+          </div>
+          <div class="label">Inputs</div>
+          <div class="grid">
+            <div class="row-grid">
+              <figure>
+                <img
+                  src="public/a3-rect1-original.jpg"
+                  alt="Rectification original 1"
+                />
+                <figcaption>Original capture</figcaption>
+              </figure>
+              <figure>
+                <img
+                  src="public/a3-rect1-annotated.jpg"
+                  alt="Rectification annotated 1"
+                />
+                <figcaption>Clicked correspondences</figcaption>
+              </figure>
+            </div>
+          </div>
+          <hr />
+          <div class="label">Outputs</div>
+          <div class="grid">
+            <div class="row-grid">
+              <figure>
+                <img
+                  src="public/a3-rect1-nn.jpg"
+                  alt="Rectification nearest neighbor 1"
+                />
+                <figcaption>Nearest neighbor warp</figcaption>
+              </figure>
+              <figure>
+                <img
+                  src="public/a3-rect1-bilinear.jpg"
+                  alt="Rectification bilinear 1"
+                />
+                <figcaption>Bilinear warp</figcaption>
+              </figure>
+              <figure>
+                <img
+                  src="public/a3-rect1-alpha.jpg"
+                  alt="Rectification alpha mask 1"
+                />
+                <figcaption>Alpha mask (optional)</figcaption>
+              </figure>
+            </div>
+          </div>
+        </div>
+
+        <div class="group-block">
+          <h4>Rectification · Example 2</h4>
+          <div class="label">
+            Add notes about geometric assumptions and any artifacts you
+            observed.
+          </div>
+          <div class="label">Inputs</div>
+          <div class="grid">
+            <div class="row-grid">
+              <figure>
+                <img
+                  src="public/a3-rect2-original.jpg"
+                  alt="Rectification original 2"
+                />
+                <figcaption>Original capture</figcaption>
+              </figure>
+              <figure>
+                <img
+                  src="public/a3-rect2-annotated.jpg"
+                  alt="Rectification annotated 2"
+                />
+                <figcaption>Clicked correspondences</figcaption>
+              </figure>
+            </div>
+          </div>
+          <hr />
+          <div class="label">Outputs</div>
+          <div class="grid">
+            <div class="row-grid">
+              <figure>
+                <img
+                  src="public/a3-rect2-nn.jpg"
+                  alt="Rectification nearest neighbor 2"
+                />
+                <figcaption>Nearest neighbor warp</figcaption>
+              </figure>
+              <figure>
+                <img
+                  src="public/a3-rect2-bilinear.jpg"
+                  alt="Rectification bilinear 2"
+                />
+                <figcaption>Bilinear warp</figcaption>
+              </figure>
+              <figure>
+                <img
+                  src="public/a3-rect2-alpha.jpg"
+                  alt="Rectification alpha mask 2"
+                />
+                <figcaption>Alpha mask (optional)</figcaption>
+              </figure>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="a4" class="section">
+        <h2>A.4: Blend Images into a Mosaic</h2>
+        <p>
+          Walk through your compositing strategy: reference frame selection,
+          canvas bounds, accumulation of warped images, and the weighting scheme
+          you used to feather overlaps. Comment on any histogram matching or
+          exposure adjustments that improved seam quality.
+        </p>
+
+        <div class="group-block">
+          <h4>Mosaic 1 · Scene Title</h4>
+          <div class="label">
+            Provide context: capture location, number of frames, and alignment
+            details.
+          </div>
+          <div class="label">Inputs</div>
+          <div class="grid">
+            <div class="row-grid">
+              <figure>
+                <img src="public/a4-mos1-src1.jpg" alt="Mosaic 1 source 1" />
+                <figcaption>Source 1</figcaption>
+              </figure>
+              <figure>
+                <img src="public/a4-mos1-src2.jpg" alt="Mosaic 1 source 2" />
+                <figcaption>Source 2</figcaption>
+              </figure>
+              <figure>
+                <img src="public/a4-mos1-src3.jpg" alt="Mosaic 1 source 3" />
+                <figcaption>Source 3 (optional)</figcaption>
+              </figure>
+            </div>
+          </div>
+          <hr />
+          <div class="label">Outputs</div>
+          <div class="grid">
+            <div class="row-grid">
+              <figure>
+                <img src="public/a4-mos1-weights.jpg" alt="Mosaic 1 weights" />
+                <figcaption>Weight / alpha visualization</figcaption>
+              </figure>
+              <figure>
+                <img
+                  src="public/a4-mos1-result.jpg"
+                  alt="Mosaic 1 final result"
+                />
+                <figcaption>Final mosaic</figcaption>
+              </figure>
+            </div>
+          </div>
+        </div>
+
+        <div class="group-block">
+          <h4>Mosaic 2 · Scene Title</h4>
+          <div class="label">
+            Summarize notable challenges (moving subjects, lighting, etc.).
+          </div>
+          <div class="label">Inputs</div>
+          <div class="grid">
+            <div class="row-grid">
+              <figure>
+                <img src="public/a4-mos2-src1.jpg" alt="Mosaic 2 source 1" />
+                <figcaption>Source 1</figcaption>
+              </figure>
+              <figure>
+                <img src="public/a4-mos2-src2.jpg" alt="Mosaic 2 source 2" />
+                <figcaption>Source 2</figcaption>
+              </figure>
+              <figure>
+                <img src="public/a4-mos2-src3.jpg" alt="Mosaic 2 source 3" />
+                <figcaption>Source 3 (optional)</figcaption>
+              </figure>
+            </div>
+          </div>
+          <hr />
+          <div class="label">Outputs</div>
+          <div class="grid">
+            <div class="row-grid">
+              <figure>
+                <img src="public/a4-mos2-weights.jpg" alt="Mosaic 2 weights" />
+                <figcaption>Weight / alpha visualization</figcaption>
+              </figure>
+              <figure>
+                <img
+                  src="public/a4-mos2-result.jpg"
+                  alt="Mosaic 2 final result"
+                />
+                <figcaption>Final mosaic</figcaption>
+              </figure>
+            </div>
+          </div>
+        </div>
+
+        <div class="group-block">
+          <h4>Mosaic 3 · Scene Title</h4>
+          <div class="label">
+            Note anything unique such as non-planar structure, large field of
+            view, or creative projection choices.
+          </div>
+          <div class="label">Inputs</div>
+          <div class="grid">
+            <div class="row-grid">
+              <figure>
+                <img src="public/a4-mos3-src1.jpg" alt="Mosaic 3 source 1" />
+                <figcaption>Source 1</figcaption>
+              </figure>
+              <figure>
+                <img src="public/a4-mos3-src2.jpg" alt="Mosaic 3 source 2" />
+                <figcaption>Source 2</figcaption>
+              </figure>
+              <figure>
+                <img src="public/a4-mos3-src3.jpg" alt="Mosaic 3 source 3" />
+                <figcaption>Source 3 (optional)</figcaption>
+              </figure>
+            </div>
+          </div>
+          <hr />
+          <div class="label">Outputs</div>
+          <div class="grid">
+            <div class="row-grid">
+              <figure>
+                <img src="public/a4-mos3-weights.jpg" alt="Mosaic 3 weights" />
+                <figcaption>Weight / alpha visualization</figcaption>
+              </figure>
+              <figure>
+                <img
+                  src="public/a4-mos3-result.jpg"
+                  alt="Mosaic 3 final result"
+                />
+                <figcaption>Final mosaic</figcaption>
+              </figure>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="appendix" class="section">
+        <h2>Appendix &amp; Reflection</h2>
+        <p>
+          Summarize libraries and helper packages used (excluding forbidden
+          homography/warping functions). Mention validation steps, numerical
+          issues you encountered, and how you would extend the pipeline if given
+          more time.
+        </p>
+        <p>
+          Credit collaborators or resources you consulted, and jot down lessons
+          for future you: what worked well, what was fragile, and what you would
+          try differently next time.
+        </p>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <p class="muted small">
+          CS180/280A · Project 3A · Image Warping and Mosaicing
+        </p>
+      </div>
+    </footer>
+  </body>
+</html>
