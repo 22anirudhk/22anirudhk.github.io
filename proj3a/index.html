@@ -21,16 +21,16 @@
         tex: {
           inlineMath: [
             ["\\(", "\\)"],
-            ["$", "$"]
+            ["$", "$"],
           ],
           displayMath: [
             ["\\[", "\\]"],
-            ["$$", "$$"]
-          ]
+            ["$$", "$$"],
+          ],
         },
         options: {
-          skipHtmlTags: ["script", "noscript", "style", "textarea", "pre"]
-        }
+          skipHtmlTags: ["script", "noscript", "style", "textarea", "pre"],
+        },
       };
     </script>
     <script
@@ -224,11 +224,16 @@
       <section id="overview" class="section">
         <h2>Overview &amp; Pipeline</h2>
         <p>
-          Part A stitches panoramas from hand-picked correspondences using
-          inverse warps, nearest-neighbor/bilinear sampling, and alpha
-          feathering. Part B replaces the manual step with Harris corners, ANMS,
-          40&times;40 to 8&times;8 descriptors, Lowe-ratio matching, and 4-point
-          RANSAC to autostitch mosaics.
+          Part A starts with manually clicked correspondences to recover
+          homographies with least squares, resamples the second image onto the
+          reference canvas with both nearest-neighbor and bilinear
+          interpolation, and composites them with feathered alpha masks. Part B
+          swaps the manual correspondences for an automated pipeline: Harris
+          responses are thinned with adaptive non-maximal suppression, each
+          surviving corner gets a blurred 40&times;40 window that is subsampled
+          to an 8&times;8 descriptor, Lowe-ratio matching proposes pairs, and
+          four-point RANSAC estimates a homography whose inliers feed the same
+          warping and blending code.
         </p>
         <div id="overview-grid" class="grid"></div>
       </section>
@@ -246,65 +251,54 @@
       <section id="a2" class="section">
         <h2>A.2: Recover Homographies</h2>
         <p>
-          I click correspondences, store them in JSON, and flip the saved
-          (col,row) order into (row,col) when they are read back. Each match
-          treats image 1 as the reference, so I build two rows of the linear
-          system using the image 2 coordinates on the left and the image 1
-          coordinates on the right:
-          <code>[im2x, im2y, 1, 0, 0, 0, -im2x * im1x, -im2y * im1x]</code> and
-          <code>[0, 0, 0, im2x, im2y, 1, -im2x * im1y, -im2y * im1y]</code>.
-          Stacking all rows gives
-          an overdetermined <code>Ah = b</code> system for the eight free
-          entries of the homography. I solve it with
-          <code>np.linalg.lstsq</code>, append <code>1</code> as the
-          bottom-right entry, and reshape the vector into a 3x3 matrix.
+          I collect correspondences with a browser tool, store them as
+          (column,row) JSON pairs, and flip them back to (row,column) when
+          loading so they match NumPy's indexing. Image 1 is always the
+          reference frame. For each correspondence I contribute two equations to
+          the linear system: one enforcing the warped column and one enforcing
+          the warped row. The eight unknowns live in the first two rows and last
+          column of the homography, so the coefficients use the image 2
+          coordinates while the right-hand side stores the image 1 target.
+          Rejecting the trivial zero solution means moving the target pixels to
+          the right-hand side and solving an overdetermined
+          <code>Ah = b</code>. I solve it with
+          <code>np.linalg.lstsq(A, b)[0]</code>, append a trailing
+          <code>1</code> to fix the scale, and reshape the result into a
+          3&times;3 matrix. At least four correspondences are required, but I
+          typically click eight or more to stabilize the fit.
         </p>
         <div class="matrix-card">
           <p>
-            \[
-            \underbrace{
-            \begin{bmatrix}
-            \mathrm{im2x}_1 & \mathrm{im2y}_1 & 1 & 0 & 0 & 0 & -\mathrm{im2x}_1 \,\mathrm{im1x}_1 & -\mathrm{im2y}_1 \,\mathrm{im1x}_1 \\
-            0 & 0 & 0 & \mathrm{im2x}_1 & \mathrm{im2y}_1 & 1 & -\mathrm{im2x}_1 \,\mathrm{im1y}_1 & -\mathrm{im2y}_1 \,\mathrm{im1y}_1 \\
-            \vdots & \vdots & \vdots & \vdots & \vdots & \vdots & \vdots & \vdots \\
-            \mathrm{im2x}_n & \mathrm{im2y}_n & 1 & 0 & 0 & 0 & -\mathrm{im2x}_n \,\mathrm{im1x}_n & -\mathrm{im2y}_n \,\mathrm{im1x}_n \\
-            0 & 0 & 0 & \mathrm{im2x}_n & \mathrm{im2y}_n & 1 & -\mathrm{im2x}_n \,\mathrm{im1y}_n & -\mathrm{im2y}_n \,\mathrm{im1y}_n
-            \end{bmatrix}
-            }_{A}
-            \underbrace{
-            \begin{bmatrix}
-            a \\ b \\ c \\ d \\ e \\ f \\ g \\ h
-            \end{bmatrix}
-            }_{\mathbf{h}}
-            =
-            \underbrace{
-            \begin{bmatrix}
-            \mathrm{im1x}_1 \\ \mathrm{im1y}_1 \\ \vdots \\ \mathrm{im1x}_n \\ \mathrm{im1y}_n
-            \end{bmatrix}
-            }_{\mathbf{b}}
-            \]
+            \[ \underbrace{ \begin{bmatrix} \mathrm{im2x}_1 & \mathrm{im2y}_1 &
+            1 & 0 & 0 & 0 & -\mathrm{im2x}_1 \,\mathrm{im1x}_1 &
+            -\mathrm{im2y}_1 \,\mathrm{im1x}_1 \\ 0 & 0 & 0 & \mathrm{im2x}_1 &
+            \mathrm{im2y}_1 & 1 & -\mathrm{im2x}_1 \,\mathrm{im1y}_1 &
+            -\mathrm{im2y}_1 \,\mathrm{im1y}_1 \\ \vdots & \vdots & \vdots &
+            \vdots & \vdots & \vdots & \vdots & \vdots \\ \mathrm{im2x}_n &
+            \mathrm{im2y}_n & 1 & 0 & 0 & 0 & -\mathrm{im2x}_n \,\mathrm{im1x}_n
+            & -\mathrm{im2y}_n \,\mathrm{im1x}_n \\ 0 & 0 & 0 & \mathrm{im2x}_n
+            & \mathrm{im2y}_n & 1 & -\mathrm{im2x}_n \,\mathrm{im1y}_n &
+            -\mathrm{im2y}_n \,\mathrm{im1y}_n \end{bmatrix} }_{A} \underbrace{
+            \begin{bmatrix} a \\ b \\ c \\ d \\ e \\ f \\ g \\ h \end{bmatrix}
+            }_{\mathbf{h}} = \underbrace{ \begin{bmatrix} \mathrm{im1x}_1 \\
+            \mathrm{im1y}_1 \\ \vdots \\ \mathrm{im1x}_n \\ \mathrm{im1y}_n
+            \end{bmatrix} }_{\mathbf{b}} \]
           </p>
           <p class="matrix-note">
             \(\mathrm{im2x}_i\) and \(\mathrm{im2y}_i\) are the column/row of
-            correspondence \(i\) in the second image, while
-            \(\mathrm{im1x}_i\) and \(\mathrm{im1y}_i\) are the matching
-            coordinates in the reference image.
+            correspondence \(i\) in the second image, while \(\mathrm{im1x}_i\)
+            and \(\mathrm{im1y}_i\) are the matching coordinates in the
+            reference image.
           </p>
         </div>
         <div class="matrix-card">
           <p>
-            \[
-            H =
-            \begin{bmatrix}
-            a & b & c \\
-            d & e & f \\
-            g & h & 1
-            \end{bmatrix}
-            \]
+            \[ H = \begin{bmatrix} a & b & c \\ d & e & f \\ g & h & 1
+            \end{bmatrix} \]
           </p>
           <p class="matrix-note">
-            I set the bottom-right entry to \(1\) after solving so the
-            recovered vector reshapes cleanly into a homography matrix.
+            I set the bottom-right entry to \(1\) after solving so the recovered
+            vector reshapes cleanly into a homography matrix.
           </p>
         </div>
         <div id="a2-grid" class="grid"></div>
@@ -313,14 +307,18 @@
       <section id="a3" class="section">
         <h2>A.3: Warp the Images</h2>
         <p>
-          For any warp I either reuse the object’s reference quadrilateral or
-          map all four image corners through <code>H</code> to size the output
-          canvas. Each pixel in the destination grid is sent through
-          <code>H⁻¹</code>, divided by the homogeneous scale, and checked
-          against the source bounds. Nearest neighbor simply rounds those
-          coordinates, while bilinear interpolation uses the area-based weights
-          from <code>bilinear_interp_helper</code> to blend the four neighbors.
-          Results are clamped to <code>uint8</code> before saving.
+          When rectifying a single object I bound the warp to the reference
+          quadrilateral supplied with the correspondences; otherwise I run all
+          four original image corners through <code>H</code> to predict the
+          warped bounding box. Each output pixel walks backwards through the
+          transform by multiplying with <code>H^{-1}</code>, dividing by the
+          homogeneous scale, and sanity checking the source coordinates. The
+          nearest-neighbor branch rounds those coordinates, while the bilinear
+          branch retrieves the surrounding four samples and blends them with the
+          rectangle-area weights computed in
+          <code>bilinear_interp_helper</code>. The output array is clipped to
+          <code>[0, 255]</code> and converted to <code>uint8</code> before
+          saving.
         </p>
         <div id="a3-grid" class="grid"></div>
       </section>
@@ -328,15 +326,17 @@
       <section id="a4" class="section">
         <h2>A.4: Blend Images into a Mosaic</h2>
         <p>
-          I load RGBA inputs when available, recover <code>H</code>, and warp
-          the partner frame with the bilinear routine. The warped
-          correspondences are compared with the reference points to estimate a
-          global row/column shift so both images land on the same canvas.
-          Feathering relies on the alpha masks:
-          <code>distance_transform_edt</code> produces smooth weights, I
-          normalize the two masks so they sum to one per pixel, and then blend
-          the color channels. I also dump each recovered homography to disk for
-          debugging.
+          I read both images with their alpha channels intact, recover
+          <code>H</code>, and warp the partner frame with bilinear
+          interpolation. To align the two layers I push each image 2
+          correspondence through <code>H</code>, compare it with the reference
+          correspondence, and take the mean row/column offsets as a global
+          shift. That shift determines how both images are stamped onto a shared
+          canvas. For feathering I feed each alpha mask to
+          <code>distance_transform_edt</code>, normalize the two distance maps
+          so their per-pixel sum is one, broadcast the weights across the color
+          channels, and blend. Every recovered homography is also written to
+          disk for inspection.
         </p>
         <div id="a4-grid" class="grid"></div>
       </section>
@@ -344,11 +344,18 @@
       <section id="b1" class="section">
         <h2>B.1: Harris Corner Detection</h2>
         <p>
-          I reuse the provided Harris detector with a small Gaussian blur and
-          apply adaptive non-maximal suppression to keep the 300 most spatially
-          separated responses using an <code>c = 0.9</code> threshold. The heat
-          map shows the raw corner strength before suppression, followed by the
-          overlays with and without ANMS.
+          I reuse the provided Harris detector, then feed its coordinate list to
+          my adaptive non-maximal suppression routine. Corners are sorted by
+          response strength, and each point records the distance to the nearest
+          stronger corner whose response exceeds
+          <code>c &times; r_i</code> (here <code>c = 0.9</code>). The 300
+          corners with the largest suppression radii survive, spreading the
+          interest points across the frame. The heat map shows the raw Harris
+          response; the overlays compare the dense detections with the ANMS
+          selection. The parameter <code>c</code> controls how similar in
+          strength a nearby corner can be before it eliminates the current one,
+          so pushing <code>c</code> toward 1.0 keeps only contenders that are
+          noticeably stronger.
         </p>
         <div id="b1-grid" class="grid"></div>
       </section>
@@ -356,11 +363,15 @@
       <section id="b2" class="section">
         <h2>B.2: Feature Descriptor Extraction</h2>
         <p>
-          Around every ANMS corner I crop a 40&times;40 RGB window, blur it with
-          <code>&sigma; = 1</code>, subsample to an 8&times;8 descriptor using a
-          stride of five pixels, and normalize each descriptor to zero mean and
-          unit standard deviation. Below are several window/descriptor pairs
-          sampled from the Berkeley Way West sequence.
+          Around every ANMS corner I crop a 40&times;40 RGB window, apply a
+          Gaussian blur with <code>&sigma; = 1</code>, and subsample the result
+          onto an 8&times;8 grid by stepping every five pixels. Each descriptor
+          is individually normalized to zero mean and unit standard deviation so
+          Euclidean distance compares structure rather than raw brightness.
+          Below are sample window/descriptor pairs from the Berkeley Way West
+          sequence. The window and descriptor sizes trade off context versus
+          descriptor length—40&times;40 retains surrounding texture, while
+          8&times;8 keeps comparisons lightweight.
         </p>
         <div id="b2-grid" class="grid"></div>
       </section>
@@ -368,11 +379,15 @@
       <section id="b3" class="section">
         <h2>B.3: Feature Matching</h2>
         <p>
-          I compare descriptors with Euclidean distance, store the nearest and
-          second-nearest neighbors, and keep matches whose distance ratio is
-          below <code>0.8</code> (Lowe-style threshold). The figure shows a few
-          matched patches plus the stacked image visualization of all surviving
-          matches.
+          Each descriptor from image 1 is compared against every descriptor from
+          image 2 with Euclidean distance. I retain both the closest and
+          second-closest matches; candidates pass the Lowe ratio test when
+          <code>d\_1 / d\_2 &lt; 0.8</code>, meaning the best match is
+          significantly better than the runner-up. The visualizations show both
+          the surviving correspondences and a few of the paired windows that led
+          to them. The Lowe ratio threshold itself measures how dominant the
+          best neighbor must be—lower ratios demand greater separation and
+          reject ambiguous matches.
         </p>
         <div id="b3-grid" class="grid"></div>
       </section>
@@ -380,14 +395,36 @@
       <section id="b4" class="section">
         <h2>B.4: RANSAC and Automatic Mosaics</h2>
         <p>
-          Four-point RANSAC samples correspondences for 6k iterations (7k for
-          the house scene) and accepts inliers whose reprojection error is under
-          the dataset-specific pixel threshold noted below. I recompute
-          homographies from all inliers, warp the partner frame, and blend it
-          with the same feathering from Part A. Each row compares the manual
-          mosaic from Part A with the fully automatic result.
+          Four-point RANSAC repeatedly samples match quadruples (6k iterations
+          for the Berkeley datasets, 7k for the house), builds a candidate
+          homography, and reprojects every correspondence from image 2 into the
+          reference view to measure the forward reprojection error. Points whose
+          error falls below the dataset-specific threshold (listed with each
+          result) are marked as inliers. The densest inlier set triggers a final
+          least-squares fit using all of its correspondences, and the resulting
+          homography flows through the same bilinear warp and feathered blend
+          from Part A. Each mosaic compares the manual baseline with the fully
+          automatic output. The RANSAC iteration count dictates how long the
+          algorithm hunts for a good consensus, while the epsilon threshold sets
+          the maximum reprojection error—measured in pixels—that an inlier is
+          allowed to have.
         </p>
         <div id="b4-grid" class="grid"></div>
+      </section>
+
+      <section id="reflection" class="section">
+        <h2>Reflection</h2>
+        <p>
+          Implementing part A highlighted to me the importance of having high
+          quality correspondences over merely a high quantity of
+          correspondences. The creation of an output grid where the reference
+          image was placed in such a way that the warped image would overlap was
+          also another point of challenge that I worked through. For part B, I
+          had an issue with setting an error threshold that was too high, which
+          caused the RANSAC algorithm to not find a good consensus. I learned
+          the importance of tuning these thresholds carefully (erring on the
+          side of prioritizing accuracy).
+        </p>
       </section>
     </main>
 
