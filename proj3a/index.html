@@ -205,10 +205,17 @@
       <section id="a2" class="section">
         <h2>A.2: Recover Homographies</h2>
         <p>
-          I collect correspondences with the tool attached with the spec. I
-          solve the following system [todo:] which is in Ax=b form to obtain the
-          homography matrix. I use the [todo: method/library] to perform the
-          solve to handle instability.
+          I click correspondences, store them in JSON, and flip the saved
+          (col,row) order into (row,col) when they are read back. Each match
+          treats image 1 as the reference, so I build two rows of the linear
+          system using the image 2 coordinates on the left and the image 1
+          coordinates on the right:
+          <code>[u, v, 1, 0, 0, 0, -u x', -v x']</code> and
+          <code>[0, 0, 0, u, v, 1, -u y', -v y']</code>. Stacking all rows gives
+          an overdetermined <code>Ah = b</code> system for the eight free
+          entries of the homography. I solve it with <code>np.linalg.lstsq</code
+          >, append <code>1</code> as the bottom-right entry, and reshape the
+          vector into a 3x3 matrix.
         </p>
         <div id="a2-grid" class="grid"></div>
       </section>
@@ -216,10 +223,14 @@
       <section id="a3" class="section">
         <h2>A.3: Warp the Images</h2>
         <p>
-          Warps use inverse mapping through <code>H⁻¹</code>. I allocate a
-          canvas using warped corner bounds, iterate over destination pixels,
-          and sample the source via nearest-neighbor or bilinear interpolation.
-          Alpha masks mark valid samples for later blending.
+          For any warp I either reuse the object’s reference quadrilateral or
+          map all four image corners through <code>H</code> to size the output
+          canvas. Each pixel in the destination grid is sent through
+          <code>H⁻¹</code>, divided by the homogeneous scale, and checked
+          against the source bounds. Nearest neighbor simply rounds those
+          coordinates, while bilinear interpolation uses the area-based weights
+          from <code>bilinear_interp_helper</code> to blend the four neighbors.
+          Results are clamped to <code>uint8</code> before saving.
         </p>
         <div id="a3-grid" class="grid"></div>
       </section>
@@ -227,9 +238,14 @@
       <section id="a4" class="section">
         <h2>A.4: Blend Images into a Mosaic</h2>
         <p>
-          Each warped image contributes RGB values weighted by a tapered alpha
-          map (1 in the center, 0 at the borders). The final panorama normalizes
-          the accumulated colors by accumulated weights, eliminating seams.
+          I load RGBA inputs when available, recover <code>H</code>, and warp
+          the partner frame with the bilinear routine. The warped correspondences
+          are compared with the reference points to estimate a global row/column
+          shift so both images land on the same canvas. Feathering relies on the
+          alpha masks: <code>distance_transform_edt</code> produces smooth
+          weights, I normalize the two masks so they sum to one per pixel, and
+          then blend the color channels. I also dump each recovered homography
+          to disk for debugging.
         </p>
         <div id="a4-grid" class="grid"></div>
       </section>
