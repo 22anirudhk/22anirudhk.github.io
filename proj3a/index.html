@@ -16,6 +16,28 @@
     <!-- Keep the exact same stylesheet -->
     <link rel="stylesheet" href="style.css" />
 
+    <script>
+      window.MathJax = {
+        tex: {
+          inlineMath: [
+            ["\\(", "\\)"],
+            ["$", "$"]
+          ],
+          displayMath: [
+            ["\\[", "\\]"],
+            ["$$", "$$"]
+          ]
+        },
+        options: {
+          skipHtmlTags: ["script", "noscript", "style", "textarea", "pre"]
+        }
+      };
+    </script>
+    <script
+      defer
+      src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"
+    ></script>
+
     <style>
       :root {
         /* Set the exact image height (in px) for all thumbnails */
@@ -229,13 +251,62 @@
           treats image 1 as the reference, so I build two rows of the linear
           system using the image 2 coordinates on the left and the image 1
           coordinates on the right:
-          <code>[u, v, 1, 0, 0, 0, -u x', -v x']</code> and
-          <code>[0, 0, 0, u, v, 1, -u y', -v y']</code>. Stacking all rows gives
+          <code>[im2x, im2y, 1, 0, 0, 0, -im2x * im1x, -im2y * im1x]</code> and
+          <code>[0, 0, 0, im2x, im2y, 1, -im2x * im1y, -im2y * im1y]</code>.
+          Stacking all rows gives
           an overdetermined <code>Ah = b</code> system for the eight free
           entries of the homography. I solve it with
           <code>np.linalg.lstsq</code>, append <code>1</code> as the
           bottom-right entry, and reshape the vector into a 3x3 matrix.
         </p>
+        <div class="matrix-card">
+          <p>
+            \[
+            \underbrace{
+            \begin{bmatrix}
+            \mathrm{im2x}_1 & \mathrm{im2y}_1 & 1 & 0 & 0 & 0 & -\mathrm{im2x}_1 \,\mathrm{im1x}_1 & -\mathrm{im2y}_1 \,\mathrm{im1x}_1 \\
+            0 & 0 & 0 & \mathrm{im2x}_1 & \mathrm{im2y}_1 & 1 & -\mathrm{im2x}_1 \,\mathrm{im1y}_1 & -\mathrm{im2y}_1 \,\mathrm{im1y}_1 \\
+            \vdots & \vdots & \vdots & \vdots & \vdots & \vdots & \vdots & \vdots \\
+            \mathrm{im2x}_n & \mathrm{im2y}_n & 1 & 0 & 0 & 0 & -\mathrm{im2x}_n \,\mathrm{im1x}_n & -\mathrm{im2y}_n \,\mathrm{im1x}_n \\
+            0 & 0 & 0 & \mathrm{im2x}_n & \mathrm{im2y}_n & 1 & -\mathrm{im2x}_n \,\mathrm{im1y}_n & -\mathrm{im2y}_n \,\mathrm{im1y}_n
+            \end{bmatrix}
+            }_{A}
+            \underbrace{
+            \begin{bmatrix}
+            a \\ b \\ c \\ d \\ e \\ f \\ g \\ h
+            \end{bmatrix}
+            }_{\mathbf{h}}
+            =
+            \underbrace{
+            \begin{bmatrix}
+            \mathrm{im1x}_1 \\ \mathrm{im1y}_1 \\ \vdots \\ \mathrm{im1x}_n \\ \mathrm{im1y}_n
+            \end{bmatrix}
+            }_{\mathbf{b}}
+            \]
+          </p>
+          <p class="matrix-note">
+            \(\mathrm{im2x}_i\) and \(\mathrm{im2y}_i\) are the column/row of
+            correspondence \(i\) in the second image, while
+            \(\mathrm{im1x}_i\) and \(\mathrm{im1y}_i\) are the matching
+            coordinates in the reference image.
+          </p>
+        </div>
+        <div class="matrix-card">
+          <p>
+            \[
+            H =
+            \begin{bmatrix}
+            a & b & c \\
+            d & e & f \\
+            g & h & 1
+            \end{bmatrix}
+            \]
+          </p>
+          <p class="matrix-note">
+            I set the bottom-right entry to \(1\) after solving so the
+            recovered vector reshapes cleanly into a homography matrix.
+          </p>
+        </div>
         <div id="a2-grid" class="grid"></div>
       </section>
 
