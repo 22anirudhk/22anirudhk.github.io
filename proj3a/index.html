@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>CS180/280A · Project 3A</title>
+    <title>CS180/280A · Project 3A/3B</title>
 
     <!-- Inter (thin) -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -140,6 +140,23 @@
         box-sizing: border-box;
       }
 
+      /* Enlarge descriptor window/feature visuals without touching other grids */
+      .grid .descriptor-figure {
+        flex: 0 0 200px;
+      }
+      .grid .descriptor-figure img {
+        height: 200px;
+        width: auto;
+      }
+      @media (max-width: 760px) {
+        .grid .descriptor-figure {
+          flex: 1 1 160px;
+        }
+        .grid .descriptor-figure img {
+          height: 160px;
+        }
+      }
+
       .matrix-card {
         width: 100%;
         overflow-x: auto;
@@ -175,8 +192,8 @@
   <body>
     <header class="site-header">
       <div class="container">
-        <h1 class="title">CS 180 Programming Project #3A</h1>
-        <h2 class="sub">Image Warping and Mosaicing</h2>
+        <h1 class="title">CS 180 Programming Project #3A/3B</h1>
+        <h2 class="sub">Image Warping, Feature Matching, and Autostitching</h2>
         <h3 class="due"><span>Anirudh Kotamraju</span></h3>
       </div>
     </header>
@@ -185,9 +202,11 @@
       <section id="overview" class="section">
         <h2>Overview &amp; Pipeline</h2>
         <p>
-          I estimate homographies from hand-picked matches, perform inverse
-          warps with both nearest-neighbor and bilinear interpolation, and
-          feather alpha masks to blend panoramas.
+          Part A stitches panoramas from hand-picked correspondences using
+          inverse warps, nearest-neighbor/bilinear sampling, and alpha
+          feathering. Part B replaces the manual step with Harris corners, ANMS,
+          40&times;40 to 8&times;8 descriptors, Lowe-ratio matching, and 4-point
+          RANSAC to autostitch mosaics.
         </p>
         <div id="overview-grid" class="grid"></div>
       </section>
@@ -213,9 +232,9 @@
           <code>[u, v, 1, 0, 0, 0, -u x', -v x']</code> and
           <code>[0, 0, 0, u, v, 1, -u y', -v y']</code>. Stacking all rows gives
           an overdetermined <code>Ah = b</code> system for the eight free
-          entries of the homography. I solve it with <code>np.linalg.lstsq</code
-          >, append <code>1</code> as the bottom-right entry, and reshape the
-          vector into a 3x3 matrix.
+          entries of the homography. I solve it with
+          <code>np.linalg.lstsq</code>, append <code>1</code> as the
+          bottom-right entry, and reshape the vector into a 3x3 matrix.
         </p>
         <div id="a2-grid" class="grid"></div>
       </section>
@@ -239,15 +258,65 @@
         <h2>A.4: Blend Images into a Mosaic</h2>
         <p>
           I load RGBA inputs when available, recover <code>H</code>, and warp
-          the partner frame with the bilinear routine. The warped correspondences
-          are compared with the reference points to estimate a global row/column
-          shift so both images land on the same canvas. Feathering relies on the
-          alpha masks: <code>distance_transform_edt</code> produces smooth
-          weights, I normalize the two masks so they sum to one per pixel, and
-          then blend the color channels. I also dump each recovered homography
-          to disk for debugging.
+          the partner frame with the bilinear routine. The warped
+          correspondences are compared with the reference points to estimate a
+          global row/column shift so both images land on the same canvas.
+          Feathering relies on the alpha masks:
+          <code>distance_transform_edt</code> produces smooth weights, I
+          normalize the two masks so they sum to one per pixel, and then blend
+          the color channels. I also dump each recovered homography to disk for
+          debugging.
         </p>
         <div id="a4-grid" class="grid"></div>
+      </section>
+
+      <section id="b1" class="section">
+        <h2>B.1: Harris Corner Detection</h2>
+        <p>
+          I reuse the provided Harris detector with a small Gaussian blur and
+          apply adaptive non-maximal suppression to keep the 300 most spatially
+          separated responses using an <code>c = 0.9</code> threshold. The heat
+          map shows the raw corner strength before suppression, followed by the
+          overlays with and without ANMS.
+        </p>
+        <div id="b1-grid" class="grid"></div>
+      </section>
+
+      <section id="b2" class="section">
+        <h2>B.2: Feature Descriptor Extraction</h2>
+        <p>
+          Around every ANMS corner I crop a 40&times;40 RGB window, blur it with
+          <code>&sigma; = 1</code>, subsample to an 8&times;8 descriptor using a
+          stride of five pixels, and normalize each descriptor to zero mean and
+          unit standard deviation. Below are several window/descriptor pairs
+          sampled from the Berkeley Way West sequence.
+        </p>
+        <div id="b2-grid" class="grid"></div>
+      </section>
+
+      <section id="b3" class="section">
+        <h2>B.3: Feature Matching</h2>
+        <p>
+          I compare descriptors with Euclidean distance, store the nearest and
+          second-nearest neighbors, and keep matches whose distance ratio is
+          below <code>0.8</code> (Lowe-style threshold). The figure shows a few
+          matched patches plus the stacked image visualization of all surviving
+          matches.
+        </p>
+        <div id="b3-grid" class="grid"></div>
+      </section>
+
+      <section id="b4" class="section">
+        <h2>B.4: RANSAC and Automatic Mosaics</h2>
+        <p>
+          Four-point RANSAC samples correspondences for 6k iterations (7k for
+          the house scene) and accepts inliers whose reprojection error is under
+          the dataset-specific pixel threshold noted below. I recompute
+          homographies from all inliers, warp the partner frame, and blend it
+          with the same feathering from Part A. Each row compares the manual
+          mosaic from Part A with the fully automatic result.
+        </p>
+        <div id="b4-grid" class="grid"></div>
       </section>
     </main>
 
@@ -300,6 +369,13 @@
             : { src: itemOrSrc, title, subtitle };
 
         const fig = document.createElement("figure");
+        if (item.figureClass) {
+          if (Array.isArray(item.figureClass)) {
+            fig.classList.add(...item.figureClass);
+          } else {
+            fig.classList.add(item.figureClass);
+          }
+        }
         const heading = item.title || "Untitled";
         const detail = item.subtitle || "";
 
@@ -730,6 +806,355 @@
         },
       ];
 
+      const B1 = [
+        {
+          label: "Berkeley Way West — Harris Responses",
+          note: "Harris detector (sigma=1) with ANMS keeping 300 corners at c=0.9.",
+          inputs: [
+            [
+              {
+                src: P("inputs/bww-reference.png"),
+                title: "Reference frame",
+              },
+            ],
+          ],
+          outputs: [
+            [
+              {
+                src: P("outputs-3b/b1/bww-harris_response_image.png"),
+                title: "Harris response (normalized)",
+              },
+            ],
+            [
+              {
+                src: P("outputs-3b/b1/bww-reference_harris_without_anms.png"),
+                title: "Corners before ANMS",
+              },
+              {
+                src: P("outputs-3b/b1/bww-reference_harris_with_anms.png"),
+                title: "Corners after ANMS (300 pts)",
+              },
+            ],
+          ],
+        },
+      ];
+
+      const B2 = [
+        {
+          label: "Berkeley Way West — Sample Descriptors",
+          note: "40x40 windows blurred (sigma=1), subsampled to 8x8, and whitened (mean 0, std 1).",
+          outputs: [
+            [
+              {
+                src: P("outputs-3b/b2/bww-reference_0_window.png"),
+                title: "Window #0 (40x40)",
+                figureClass: "descriptor-figure",
+              },
+              {
+                src: P("outputs-3b/b2/bww-reference_0_feature.png"),
+                title: "Descriptor #0 (8x8)",
+                figureClass: "descriptor-figure",
+              },
+            ],
+            [
+              {
+                src: P("outputs-3b/b2/bww-reference_1_window.png"),
+                title: "Window #1",
+                figureClass: "descriptor-figure",
+              },
+              {
+                src: P("outputs-3b/b2/bww-reference_1_feature.png"),
+                title: "Descriptor #1",
+                figureClass: "descriptor-figure",
+              },
+            ],
+            [
+              {
+                src: P("outputs-3b/b2/bww-reference_2_window.png"),
+                title: "Window #2",
+                figureClass: "descriptor-figure",
+              },
+              {
+                src: P("outputs-3b/b2/bww-reference_2_feature.png"),
+                title: "Descriptor #2",
+                figureClass: "descriptor-figure",
+              },
+            ],
+            [
+              {
+                src: P("outputs-3b/b2/bww-reference_3_window.png"),
+                title: "Window #3",
+                figureClass: "descriptor-figure",
+              },
+              {
+                src: P("outputs-3b/b2/bww-reference_3_feature.png"),
+                title: "Descriptor #3",
+                figureClass: "descriptor-figure",
+              },
+            ],
+            [
+              {
+                src: P("outputs-3b/b2/bww-reference_4_window.png"),
+                title: "Window #4",
+                figureClass: "descriptor-figure",
+              },
+              {
+                src: P("outputs-3b/b2/bww-reference_4_feature.png"),
+                title: "Descriptor #4",
+                figureClass: "descriptor-figure",
+              },
+            ],
+            [
+              {
+                src: P("outputs-3b/b2/bww-reference_5_window.png"),
+                title: "Window #5",
+                figureClass: "descriptor-figure",
+              },
+              {
+                src: P("outputs-3b/b2/bww-reference_5_feature.png"),
+                title: "Descriptor #5",
+                figureClass: "descriptor-figure",
+              },
+            ],
+          ],
+        },
+      ];
+
+      const B3 = [
+        {
+          label: "Berkeley Way West — Lowe-Ratio Matches",
+          note: "Euclidean descriptor distance with Lowe ratio threshold 0.8. Examples show paired windows/descriptors.",
+          inputs: [
+            [
+              {
+                src: P("inputs/bww-reference.png"),
+                title: "Reference frame",
+              },
+              {
+                src: P("inputs/bww-tochange.png"),
+                title: "Partner frame",
+              },
+            ],
+          ],
+          outputs: [
+            [
+              {
+                src: P("outputs-3b/bww/initial_correspondences.png"),
+                title: "Matches before RANSAC",
+              },
+            ],
+            [
+              {
+                src: P("outputs-3b/b3/0_window_bww-reference.png"),
+                title: "Ref window #0",
+                figureClass: "descriptor-figure",
+              },
+              {
+                src: P("outputs-3b/b3/0_window_bww-tochange.png"),
+                title: "Partner window #0",
+                figureClass: "descriptor-figure",
+              },
+              {
+                src: P("outputs-3b/b3/0_feature_bww-reference.png"),
+                title: "Ref descriptor #0",
+                figureClass: "descriptor-figure",
+              },
+              {
+                src: P("outputs-3b/b3/0_feature_bww-tochange.png"),
+                title: "Partner descriptor #0",
+                figureClass: "descriptor-figure",
+              },
+            ],
+
+            [
+              {
+                src: P("outputs-3b/b3/4_window_bww-reference.png"),
+                title: "Ref window #4",
+                figureClass: "descriptor-figure",
+              },
+              {
+                src: P("outputs-3b/b3/4_window_bww-tochange.png"),
+                title: "Partner window #4",
+                figureClass: "descriptor-figure",
+              },
+              {
+                src: P("outputs-3b/b3/4_feature_bww-reference.png"),
+                title: "Ref descriptor #4",
+                figureClass: "descriptor-figure",
+              },
+              {
+                src: P("outputs-3b/b3/4_feature_bww-tochange.png"),
+                title: "Partner descriptor #4",
+                figureClass: "descriptor-figure",
+              },
+            ],
+            [
+              {
+                src: P("outputs-3b/b3/9_window_bww-reference.png"),
+                title: "Ref window #9",
+                figureClass: "descriptor-figure",
+              },
+              {
+                src: P("outputs-3b/b3/9_window_bww-tochange.png"),
+                title: "Partner window #9",
+                figureClass: "descriptor-figure",
+              },
+              {
+                src: P("outputs-3b/b3/9_feature_bww-reference.png"),
+                title: "Ref descriptor #9",
+                figureClass: "descriptor-figure",
+              },
+              {
+                src: P("outputs-3b/b3/9_feature_bww-tochange.png"),
+                title: "Partner descriptor #9",
+                figureClass: "descriptor-figure",
+              },
+            ],
+          ],
+        },
+      ];
+
+      const B4 = [
+        {
+          label: "Berkeley Way West — Automatic Mosaic",
+          note: "ANMS: 300 pts (c=0.9); Lowe ratio 0.8; RANSAC: 6000 iters, epsilon=20 px.",
+          inputs: [
+            [
+              {
+                src: P("inputs/bww-reference.png"),
+                title: "Reference frame",
+              },
+              {
+                src: P("inputs/bww-tochange.png"),
+                title: "Partner frame",
+              },
+            ],
+          ],
+          outputsThumb: "var(--mosaic-thumb-h)",
+          outputs: [
+            [
+              {
+                src: P("outputs-3b/bww/initial_correspondences.png"),
+                title: "Matches before RANSAC",
+              },
+            ],
+            [
+              {
+                src: P("outputs-3b/bww/final_correspondences.png"),
+                title: "Inliers after RANSAC",
+              },
+            ],
+
+            [
+              {
+                src: P(
+                  "outputs/bww-reference_bww-tochange_mosaic_bilinear.png",
+                ),
+                title: "Manual mosaic (Part A)",
+              },
+            ],
+            [
+              {
+                src: P("outputs-3b/bww/mosaic.png"),
+                title: "Automatic mosaic",
+              },
+            ],
+          ],
+        },
+        {
+          label: "House — Automatic Mosaic",
+          note: "ANMS: 200 pts (c=0.9); Lowe ratio 0.85; RANSAC: 7000 iters, epsilon=7 px.",
+          inputs: [
+            [
+              {
+                src: P("inputs/house-reference.png"),
+                title: "Reference frame",
+              },
+              {
+                src: P("inputs/house-tochange.png"),
+                title: "Partner frame",
+              },
+            ],
+          ],
+          outputsThumb: "var(--mosaic-thumb-h)",
+          outputs: [
+            [
+              {
+                src: P("outputs-3b/house/initial_correspondences.png"),
+                title: "Matches before RANSAC",
+              },
+            ],
+            [
+              {
+                src: P("outputs-3b/house/final_correspondences.png"),
+                title: "Inliers after RANSAC",
+              },
+            ],
+
+            [
+              {
+                src: P(
+                  "outputs/house-reference_house-tochange_mosaic_bilinear.png",
+                ),
+                title: "Manual mosaic (Part A)",
+              },
+            ],
+            [
+              {
+                src: P("outputs-3b/house/mosaic.png"),
+                title: "Automatic mosaic",
+              },
+            ],
+          ],
+        },
+        {
+          label: "Berkeley Street — Automatic Mosaic",
+          note: "ANMS: 300 pts (c=0.9); Lowe ratio 0.8; RANSAC: 6000 iters, epsilon=20 px.",
+          inputs: [
+            [
+              {
+                src: P("inputs/street-reference.png"),
+                title: "Reference frame",
+              },
+              {
+                src: P("inputs/street-tochange.png"),
+                title: "Partner frame",
+              },
+            ],
+          ],
+          outputsThumb: "var(--mosaic-thumb-h)",
+          outputs: [
+            [
+              {
+                src: P("outputs-3b/street/initial_correspondences.png"),
+                title: "Matches before RANSAC",
+              },
+            ],
+            [
+              {
+                src: P("outputs-3b/street/final_correspondences.png"),
+                title: "Inliers after RANSAC",
+              },
+            ],
+
+            [
+              {
+                src: P(
+                  "outputs/street-reference_street-tochange_mosaic_bilinear.png",
+                ),
+                title: "Manual mosaic (Part A)",
+              },
+            ],
+            [
+              {
+                src: P("outputs-3b/street/mosaic.png"),
+                title: "Automatic mosaic",
+              },
+            ],
+          ],
+        },
+      ];
+
       // ----------------------------
       // Boot (render)
       // ----------------------------
@@ -739,6 +1164,10 @@
         buildGrouped(document.getElementById("a2-grid"), A2);
         buildGrouped(document.getElementById("a3-grid"), A3);
         buildGrouped(document.getElementById("a4-grid"), A4);
+        buildGrouped(document.getElementById("b1-grid"), B1);
+        buildGrouped(document.getElementById("b2-grid"), B2);
+        buildGrouped(document.getElementById("b3-grid"), B3);
+        buildGrouped(document.getElementById("b4-grid"), B4);
         // buildGrouped(document.getElementById("a5-grid"), A5);
       })();
     </script>
