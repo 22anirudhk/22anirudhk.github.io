@@ -318,7 +318,14 @@
           rectangle-area weights computed in
           <code>bilinear_interp_helper</code>. The output array is clipped to
           <code>[0, 255]</code> and converted to <code>uint8</code> before
-          saving.
+          saving. On the game box example the timings are roughly
+          <code>0.32&nbsp;s</code> with nearest neighbor and
+          <code>0.74&nbsp;s</code> with bilinear, illustrating the quality/speed
+          trade-off. On the couch rectification the end-to-end warp spends about
+          <code>0.31&nbsp;s</code> with nearest neighbor versus
+          <code>0.74&nbsp;s</code> with bilinear. The bilinear version has much
+          better visual quality (ex: smoother edges), so I utilized it for part
+          B of this project.
         </p>
         <div id="a3-grid" class="grid"></div>
       </section>
