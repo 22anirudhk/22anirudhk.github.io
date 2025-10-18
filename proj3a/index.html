@@ -251,16 +251,15 @@
       <section id="a2" class="section">
         <h2>A.2: Recover Homographies</h2>
         <p>
-          I collect correspondences with a browser tool, store them as
-          (column,row) JSON pairs, and flip them back to (row,column) when
-          loading so they match NumPy's indexing. Image 1 is always the
-          reference frame. For each correspondence I contribute two equations to
-          the linear system: one enforcing the warped column and one enforcing
-          the warped row. The eight unknowns live in the first two rows and last
-          column of the homography, so the coefficients use the image 2
-          coordinates while the right-hand side stores the image 1 target.
-          Rejecting the trivial zero solution means moving the target pixels to
-          the right-hand side and solving an overdetermined
+          I collect correspondences with a browser tool and have them in
+          (row,column) coordinates. Image 1 is always the reference frame. For
+          each correspondence I contribute two equations to the linear system:
+          one enforcing the warped column and one enforcing the warped row. The
+          eight unknowns live in the first two rows and last column of the
+          homography, so the coefficients use the image 2 coordinates while the
+          right-hand side stores the image 1 target. Rejecting the trivial zero
+          solution means moving the target pixels to the right-hand side and
+          solving an overdetermined
           <code>Ah = b</code>. I solve it with
           <code>np.linalg.lstsq(A, b)[0]</code>, append a trailing
           <code>1</code> to fix the scale, and reshape the result into a
@@ -352,9 +351,9 @@
         <h2>B.1: Harris Corner Detection</h2>
         <p>
           I reuse the provided Harris detector, then feed its coordinate list to
-          my adaptive non-maximal suppression routine. Corners are sorted by
-          response strength, and each point records the distance to the nearest
-          stronger corner whose response exceeds
+          my adaptive non-maximal suppression routine (ANMS). Corners are sorted
+          by response strength, and each point records the distance to the
+          nearest stronger corner whose response exceeds
           <code>c &times; r_i</code> (here <code>c = 0.9</code>). The 300
           corners with the largest suppression radii survive, spreading the
           interest points across the frame. The heat map shows the raw Harris
@@ -362,7 +361,9 @@
           selection. The parameter <code>c</code> controls how similar in
           strength a nearby corner can be before it eliminates the current one,
           so pushing <code>c</code> toward 1.0 keeps only contenders that are
-          noticeably stronger.
+          noticeably stronger. We can see that after ANMS, we have a much
+          smaller number of interest points rather than the barrage we initially
+          had.
         </p>
         <div id="b1-grid" class="grid"></div>
       </section>
@@ -375,7 +376,7 @@
           onto an 8&times;8 grid by stepping every five pixels. Each descriptor
           is individually normalized to zero mean and unit standard deviation so
           Euclidean distance compares structure rather than raw brightness.
-          Below are sample window/descriptor pairs from the Berkeley Way West
+          Below are sample window/descriptor pairs from the High Floor View of Berkeley
           sequence. The window and descriptor sizes trade off context versus
           descriptor length—40&times;40 retains surrounding texture, while
           8&times;8 keeps comparisons lightweight.
@@ -636,7 +637,7 @@
         //         src: P(
         //           "outputs/bww-reference_bww-tochange_mosaic_bilinear.png",
         //         ),
-        //         title: "Berkeley Way West Mosaic",
+        //         title: "High Floor View of Berkeley Mosaic",
         //         subtitle:
         //           "Feathered bilinear blend across the BWW building facade",
         //       },
@@ -923,7 +924,7 @@
 
       const B1 = [
         {
-          label: "Berkeley Way West — Harris Responses",
+          label: "High Floor View of Berkeley — Harris Responses",
           note: "Harris detector (sigma=1) with ANMS keeping 300 corners at c=0.9.",
           inputs: [
             [
@@ -956,7 +957,7 @@
 
       const B2 = [
         {
-          label: "Berkeley Way West — Sample Descriptors",
+          label: "High Floor View of Berkeley — Sample Descriptors",
           note: "40x40 windows blurred (sigma=1), subsampled to 8x8, and whitened (mean 0, std 1).",
           outputs: [
             [
@@ -1037,7 +1038,7 @@
 
       const B3 = [
         {
-          label: "Berkeley Way West — Lowe-Ratio Matches",
+          label: "High Floor View of Berkeley — Lowe-Ratio Matches",
           note: "Euclidean descriptor distance with Lowe ratio threshold 0.8. Examples show paired windows/descriptors.",
           inputs: [
             [
@@ -1131,7 +1132,7 @@
 
       const B4 = [
         {
-          label: "Berkeley Way West — Automatic Mosaic",
+          label: "High Floor View of Berkeley — Automatic Mosaic",
           note: "ANMS: 300 pts (c=0.9); Lowe ratio 0.8; RANSAC: 6000 iters, epsilon=20 px.",
           inputs: [
             [
