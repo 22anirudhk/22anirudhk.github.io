@@ -315,7 +315,6 @@
         </p>
         <div id="part2-impl-grid" class="grid"></div>
         <h3>Ray + Sample Visualization</h3>
-        <p>TODO</p>
         <div id="part2-rayvis-grid" class="grid"></div>
         <h3>Training Progression</h3>
         <div id="part2-progress-grid" class="grid"></div>
@@ -553,21 +552,6 @@
               },
             ],
           ],
-          outputs: [
-            [
-              {
-                matrix: [
-                  ["Frames inspected", "34"],
-                  ["Usable detections", "TODO"],
-                  ["RMS reprojection error", "TODO"],
-                  [
-                    "Lens undistortion",
-                    "Optimal camera matrix computation + undistort",
-                  ],
-                ],
-              },
-            ],
-          ],
         },
       ];
 
@@ -605,10 +589,9 @@
             [
               {
                 matrix: [
-                  ["images_train count", "31"],
-                  ["images_val count", "5"],
-                  ["c2ws_test count", "3"],
-                  ["focal length", "191.88 px"],
+                  ["Number of Training Images", "31"],
+                  ["Number of Validation Images", "5"],
+                  ["Number of Test Images", "3"],
                 ],
                 matrixNote:
                   "Undistorted using OpenCV's undistort functionality; paper corners float slightly because the tag wasn't taped down but the remap stayed stable.",
