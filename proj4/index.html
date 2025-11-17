@@ -370,25 +370,18 @@
         <div id="part2-impl-grid" class="grid"></div>
         <div class="eqs">
           <p><strong>Back-projection (pixels → camera)</strong></p>
-          \[
-          \tilde{\mathbf{u}}=\begin{bmatrix}u\\v\\1\end{bmatrix},\quad
-          \mathbf{x}_c(s)=s\,\mathbf{K}^{-1}\tilde{\mathbf{u}} \tag{E4}
-          \]
+          \[ \tilde{\mathbf{u}}=\begin{bmatrix}u\\v\\1\end{bmatrix},\quad
+          \mathbf{x}_c(s)=s\,\mathbf{K}^{-1}\tilde{\mathbf{u}} \tag{E4} \]
           <p class="eq-cite">
             Source: Project 4 Spec Part 2.1 (Pixel → camera conversion)
           </p>
         </div>
         <div class="eqs">
           <p><strong>Ray construction</strong></p>
-          \[
-          \mathbf{o}=\text{c2w}_{1:3,\,4},\quad
-          \mathbf{p}_w=\mathbf{c2w}
-          \begin{bmatrix}
-            \mathbf{x}_c(1)\\
-            1
-          \end{bmatrix},\quad
-          \mathbf{d}=\frac{\mathbf{p}_w-\mathbf{o}}{\|\mathbf{p}_w-\mathbf{o}\|} \tag{E5}
-          \]
+          \[ \mathbf{o}=\text{c2w}_{1:3,\,4},\quad \mathbf{p}_w=\mathbf{c2w}
+          \begin{bmatrix} \mathbf{x}_c(1)\\ 1 \end{bmatrix},\quad
+          \mathbf{d}=\frac{\mathbf{p}_w-\mathbf{o}}{\|\mathbf{p}_w-\mathbf{o}\|}
+          \tag{E5} \]
           <p class="eq-cite">Source: Project 4 Spec Part 2.1 (Pixel → ray)</p>
         </div>
         <p>
@@ -1061,7 +1054,7 @@
       const PART2_METRICS = [
         {
           label: "Validation Metrics",
-          note: "Validation PSNR crosses the 23 dB requirement; loss curves are shown on their own rows for clarity.",
+          note: "Validation PSNR crosses the 23 dB requirement; loss curves are shown on their own rows for clarity. The validation loss PSNR for LEGO was calculated by averaging across validation loss images.",
           outputs_rows: [
             [
               {
