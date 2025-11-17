@@ -4,3 +4,8 @@ submissions
 
 
 my_work
+
+*.pth
+*.zip
+*.pyc
+*.npz

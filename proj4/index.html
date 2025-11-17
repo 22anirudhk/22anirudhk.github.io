@@ -1,0 +1,1122 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>CS180 · Project 4</title>
+
+    <!-- Inter (thin) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap"
+      rel="stylesheet"
+    />
+
+    <!-- Keep the exact same stylesheet -->
+    <link rel="stylesheet" href="style.css" />
+
+    <script>
+      window.MathJax = {
+        tex: {
+          inlineMath: [
+            ["\\(", "\\)"],
+            ["$", "$"],
+          ],
+          displayMath: [
+            ["\\[", "\\]"],
+            ["$$", "$$"],
+          ],
+        },
+        options: {
+          skipHtmlTags: ["script", "noscript", "style", "textarea", "pre"],
+        },
+      };
+    </script>
+    <script
+      defer
+      src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"
+    ></script>
+
+    <style>
+      :root {
+        --thumb-h: 320px;
+        --mosaic-thumb-h: 500px;
+      }
+
+      .disp-R {
+        color: #e11d48;
+        font-weight: 600;
+      }
+      .disp-B {
+        color: #2563eb;
+        font-weight: 600;
+      }
+      .metrics-note {
+        font-size: 0.95rem;
+        opacity: 0.85;
+        margin-bottom: 1rem;
+      }
+      .kicker {
+        display: none;
+      }
+      .grid {
+        margin-left: auto;
+        margin-right: auto;
+        justify-items: center;
+        align-items: center;
+      }
+      .grid > .row-grid {
+        grid-column: 1 / -1;
+        width: 100%;
+      }
+      .grid figure {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        width: 100%;
+      }
+      .grid img {
+        height: auto;
+        max-height: var(--thumb-h);
+        width: auto;
+        max-width: 100%;
+        object-fit: contain;
+        display: block;
+      }
+      .grid .figure-error {
+        min-height: var(--thumb-h);
+        padding: 1rem;
+        border: 1px dashed #ddd;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        box-sizing: border-box;
+        width: 100%;
+      }
+      .group-block {
+        width: 100%;
+      }
+      .group-block h4 {
+        margin: 0.75rem 0 0.5rem;
+      }
+      .group-block .label {
+        opacity: 0.8;
+        margin: 0.25rem 0 0.5rem;
+        font-size: 0.95rem;
+      }
+      .group-block hr {
+        border: none;
+        border-top: 1px solid #eee;
+        margin: 0.75rem 0;
+      }
+      .row-grid {
+        display: flex;
+        gap: 0.9rem;
+        justify-content: center;
+        align-items: flex-start;
+        overflow-x: auto;
+        padding-bottom: 0.25rem;
+      }
+      .row-grid figure {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        flex: 1 1 220px;
+        min-width: 0;
+      }
+      .row-grid img {
+        height: auto;
+        max-height: var(--thumb-h);
+        width: auto;
+        max-width: 100%;
+        object-fit: contain;
+        display: block;
+      }
+      .row-grid .figure-error {
+        min-height: var(--thumb-h);
+        padding: 1rem;
+        border: 1px dashed #ddd;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        box-sizing: border-box;
+      }
+      .descriptor-figure {
+        flex: 0 0 200px;
+      }
+      .descriptor-figure img {
+        height: 200px;
+        width: auto;
+      }
+      @media (max-width: 760px) {
+        .descriptor-figure {
+          flex: 1 1 160px;
+        }
+        .descriptor-figure img {
+          height: 160px;
+        }
+      }
+      .matrix-card {
+        width: 100%;
+        overflow-x: auto;
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
+        padding: 0.75rem;
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+      }
+      .matrix-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo,
+          monospace;
+      }
+      .matrix-table td {
+        padding: 0.35rem 0.55rem;
+        border: 1px solid #dbeafe;
+        text-align: right;
+        white-space: nowrap;
+        font-variant-numeric: tabular-nums;
+      }
+      .matrix-note {
+        margin-top: 0.5rem;
+        font-size: 0.9rem;
+        opacity: 0.75;
+      }
+    </style>
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="container">
+        <h1 class="title">CS 180 Programming Project #4</h1>
+        <h2 class="sub">Neural Radiance Fields from Scratch</h2>
+        <h3 class="due"><span>Anirudh Kotamraju</span></h3>
+      </div>
+    </header>
+
+    <main class="container">
+      <section id="overview" class="section">
+        <h2>Overview &amp; Pipeline</h2>
+        <p>
+          This project recreates the full NeRF stack from data capture to novel
+          view synthesis. I calibrated my phone with ArUco targets, solved for
+          poses, and undistorted 39 shots of a LEGO minifigure and my Yoda
+          figurine. A pair of PyTorch models then learn continuous radiance
+          fields: first in 2D with positional-encoded MLPs, then in 3D with ray
+          marching, volumetric rendering, and view-dependent colors.
+        </p>
+      </section>
+
+      <section id="part0" class="section">
+        <h2>Part 0: Calibrating the Camera &amp; Building a Dataset</h2>
+        <p>
+          The calibration pipeline detects 4&times;4 ArUco targets, keeps all
+          correspondences batched, and resizes the captures to 200&times;200 RGB
+          crops before undistorting and packaging them with
+          intrinsics/extrinsics. The flow mirrors the spec exactly: detect tags,
+          accumulate object/image correspondences, calibrate the camera
+          intrinsics, and only then solve for per-image poses.
+        </p>
+        <h3>0.1&ndash;0.2: Calibration and Capture</h3>
+        <p>
+          The calibration process loops through 30&plus; phone images, uses
+          OpenCV's ArUco detector to find tags, stores only detections whose IDs
+          are in the measured rig, and skips frames where markers fail to appear
+          (a common issue noted in the spec). Each tag's corners are expressed
+          in meters so the resulting intrinsics are ready for downstream pose
+          estimation.
+        </p>
+        <div id="part0-grid" class="grid"></div>
+        <h3>0.3: Pose Estimation &amp; Visualization</h3>
+        <p>
+          After calibrating I iterate over every capture, solve for the camera
+          pose using Perspective-n-Point (PnP), invert the resulting extrinsic
+          to a camera-to-world matrix, and (optionally) stream frustums to Viser
+          for inspection.
+        </p>
+        <div id="part0-pose-grid" class="grid"></div>
+        <h3>0.4: Undistortion + Dataset Packaging</h3>
+        <p>
+          Distortion coefficients from calibration drive an undistortion pass
+          before each frame is centered, resized, and saved. The processing
+          pipeline crops a center square, applies undistortion (including the
+          optional optimal new camera matrix to handle black boundaries), and
+          drops the updated principal point into the dataset file. The paper
+          with the ArUco tag was not taped down, so corners can lift slightly,
+          but the undistortion handles it without artifacts. The final dataset
+          stores randomized train/val/test splits, camera poses, RGBs, and focal
+          length for later stages.
+        </p>
+        <div id="part0-dataset-grid" class="grid"></div>
+      </section>
+
+      <section id="part1" class="section">
+        <h2>Part 1: 2D Neural Field Warm-Up</h2>
+        <p>
+          I implemented positional encoding and an image-fitting MLP. Each batch
+          samples 10k pixels, encodes normalized (x, y) coordinates with
+          sinusoidal frequencies, and regresses RGB values via a 4-layer ReLU
+          network. Adam with a 1e-2 learning rate minimizes MSE while PSNR
+          tracks reconstruction quality.
+        </p>
+        <p>
+          The implementation mirrors the spec: random coordinate sampling keeps
+          memory bounded, PE lifts 2D pixels into a 42-D vector
+          (<code>L=10</code>) which enables the network to learn high-frequency
+          details like fur texture and fine-grained patterns, a Sigmoid clamps
+          colors, and a lightweight dataloader interleaves the provided fox
+          target with my own sand photo.
+        </p>
+        <div id="part1-arch-grid" class="grid"></div>
+        <h3>Training Progression</h3>
+        <div id="part1-progress-grid" class="grid"></div>
+        <h3>Hyperparameter Sweep (2&times;2 Grid)</h3>
+        <p>
+          Varying positional encoding frequency (<code>L</code>) and layer width
+          reveals that frequency has a stronger impact on reconstruction quality
+          than width: reducing <code>L</code> from 10 to 5 causes more detail
+          loss than halving width from 256 to 128, suggesting that
+          high-frequency encoding is crucial for capturing fine textures.
+        </p>
+        <div id="part1-final-grid" class="grid"></div>
+        <h3>PSNR Curve</h3>
+        <div id="part1-psnr-grid" class="grid"></div>
+      </section>
+
+      <section id="part2" class="section">
+        <h2>Part 2: Multi-view NeRF on the LEGO Scene</h2>
+        <p>
+          The NeRF implementation combines batched ray sampling, a
+          view-dependent MLP, and a differentiable volume renderer. I trained on
+          the provided LEGO dataset (100 training images, 10 validation, 60
+          test) with stratified sampling (near=2, far=6), 64 samples per ray,
+          and 10k rays per iteration. Optimization follows the spec (Adam,
+          lr=5e-4) while monitoring validation PSNR. Training was performed on a
+          MacBook M1 Pro using PyTorch with MPS (Metal Performance Shaders)
+          backend.
+        </p>
+        <p>
+          The implementation follows the spec's order: pixel-to-camera and
+          camera-to-world transformations lift UVs into 3D camera/world space;
+          ray sampling from images and point sampling along rays implement
+          stratified sampling (64 samples per ray with random jitter within each
+          bin) which provides better coverage than uniform sampling; the MLP
+          injects PE'd coordinates halfway through the trunk via skip connection
+          to preserve fine geometric details; and the volume rendering routine
+          accumulates transmittance-weighted colors along each ray, matching the
+          provided reference assert.
+        </p>
+        <div id="part2-impl-grid" class="grid"></div>
+        <h3>Ray + Sample Visualization</h3>
+        <p>TODO</p>
+        <div id="part2-rayvis-grid" class="grid"></div>
+        <h3>Training Progression</h3>
+        <div id="part2-progress-grid" class="grid"></div>
+        <h3>Metrics</h3>
+        <div id="part2-metrics-grid" class="grid"></div>
+        <h3>Spherical Rendering Video</h3>
+        <p>
+          Novel view synthesis on unseen test camera poses demonstrates the
+          NeRF's ability to generalize beyond the training views.
+        </p>
+        <div id="part2-video-grid" class="grid"></div>
+      </section>
+
+      <section id="part26" class="section">
+        <h2>Part 2.6: Training on My Yoda Dataset</h2>
+        <p>
+          Using the self-captured dataset (31 training images, 5 validation, 3
+          test), I reconfigured the pipeline for a closer near/far range
+          (0.02&ndash;0.5 m) to match the object's scale in meters, increased
+          rays per image to 250 (from 100) to better capture view-dependent
+          reflections on glossy surfaces, increased learning rate to 8e-4 (from
+          5e-4) to accelerate convergence, and extended training to 6k
+          iterations. The network width was kept at 256 units to handle the
+          complex specular highlights and glossy textures. Training was
+          performed on a MacBook M1 Pro using PyTorch with MPS (Metal
+          Performance Shaders) backend.
+        </p>
+        <h3>Ray + Sample Visualization</h3>
+        <div id="part26-rayvis-grid" class="grid"></div>
+        <div id="part26-progress-grid" class="grid"></div>
+        <div id="part26-loss-grid" class="grid"></div>
+      </section>
+
+      <section id="reflection" class="section">
+        <h2>Reflection</h2>
+        <p>
+          Reimplementing NeRF end-to-end highlighted how tightly-coupled each
+          module is: a tiny bug in positional encoding, per-ray sampling, or
+          extrinsic math manifests as blurry renders that resemble optimizer
+          issues. Ray batching and stratified sampling were the trickiest pieces
+          to debug, so Viser plots are invaluable. Collecting my own dataset
+          also forced me to reason about near/far planes, intrinsics after
+          cropping, and exposure consistency&mdash;all details that conveniently
+          disappear when working with a curated dataset.
+        </p>
+      </section>
+    </main>
+
+    <script>
+      const P = (basename) => "public/" + basename;
+
+      const formatMatrixValue = (raw) => {
+        const num = typeof raw === "number" ? raw : Number(raw);
+        if (!Number.isFinite(num)) {
+          return raw;
+        }
+        const abs = Math.abs(num);
+        if (abs !== 0 && (abs < 1e-3 || abs >= 1e3)) {
+          return num.toExponential(3);
+        }
+        const fixed = num.toFixed(4);
+        return fixed === "-0.0000" ? "0.0000" : fixed;
+      };
+
+      function renderMatrixTable(matrix) {
+        const table = document.createElement("table");
+        table.className = "matrix-table";
+        const tbody = document.createElement("tbody");
+        table.appendChild(tbody);
+        for (const row of matrix) {
+          const tr = document.createElement("tr");
+          for (const value of row) {
+            const td = document.createElement("td");
+            td.textContent = formatMatrixValue(value);
+            tr.appendChild(td);
+          }
+          tbody.appendChild(tr);
+        }
+        return table;
+      }
+
+      function createFigure(itemOrSrc, title, subtitle = "") {
+        const item =
+          typeof itemOrSrc === "object" && itemOrSrc !== null
+            ? itemOrSrc
+            : { src: itemOrSrc, title, subtitle };
+
+        const fig = document.createElement("figure");
+        if (item.figureClass) {
+          if (Array.isArray(item.figureClass)) {
+            fig.classList.add(...item.figureClass);
+          } else {
+            fig.classList.add(item.figureClass);
+          }
+        }
+        const heading = item.title || "Untitled";
+        const detail = item.subtitle || "";
+
+        const cap = document.createElement("figcaption");
+        cap.innerHTML =
+          "<strong>" + heading + "</strong>" + (detail ? "<br/>" + detail : "");
+
+        if (Array.isArray(item.matrix)) {
+          const card = document.createElement("div");
+          card.className = "matrix-card";
+          card.appendChild(renderMatrixTable(item.matrix));
+          if (item.matrixNote) {
+            const note = document.createElement("div");
+            note.className = "matrix-note";
+            note.textContent = item.matrixNote;
+            card.appendChild(note);
+          }
+          fig.appendChild(card);
+          fig.appendChild(cap);
+          return fig;
+        }
+
+        if (item.src) {
+          const img = document.createElement("img");
+          img.loading = "lazy";
+          img.alt = heading || item.src;
+          img.src = item.src;
+
+          img.onerror = () => {
+            const stub = document.createElement("div");
+            stub.className = "figure-error";
+            stub.innerHTML =
+              "<strong>Preview unavailable:</strong> <code>" +
+              item.src.replace(/</g, "&lt;").replace(/>/g, "&gt;") +
+              "</code>";
+            fig.replaceChildren(stub, cap);
+          };
+
+          fig.appendChild(img);
+          fig.appendChild(cap);
+          return fig;
+        }
+
+        const stub = document.createElement("div");
+        stub.className = "figure-error";
+        stub.innerHTML =
+          "<strong>Nothing to display.</strong>" +
+          (item.note ? "<br/>" + item.note : "");
+        fig.appendChild(stub);
+        fig.appendChild(cap);
+        return fig;
+      }
+
+      function buildRowAwareGrid(containerEl, itemsOrRows) {
+        const isRow = (x) => Array.isArray(x);
+        for (const entry of itemsOrRows) {
+          if (isRow(entry)) {
+            const row = document.createElement("div");
+            row.className = "row-grid";
+            for (const it of entry) {
+              row.appendChild(createFigure(it));
+            }
+            containerEl.appendChild(row);
+          } else {
+            containerEl.appendChild(createFigure(entry));
+          }
+        }
+      }
+
+      function buildGrouped(gridEl, groups) {
+        for (const g of groups) {
+          const block = document.createElement("div");
+          block.className = "group-block";
+          block.style.gridColumn = "1 / -1";
+
+          if (g.label) {
+            const h = document.createElement("h4");
+            h.textContent = g.label;
+            block.appendChild(h);
+          }
+          if (g.note) {
+            const n = document.createElement("div");
+            n.className = "label";
+            n.textContent = g.note;
+            block.appendChild(n);
+          }
+
+          const inputsData = g.inputs_rows || g.inputs || [];
+          if (inputsData.length) {
+            const inLabel = document.createElement("div");
+            inLabel.className = "label";
+            inLabel.textContent = "Inputs";
+            block.appendChild(inLabel);
+
+            const inWrap = document.createElement("div");
+            inWrap.className = "grid";
+            if (g.inputsThumb) {
+              inWrap.style.setProperty("--thumb-h", g.inputsThumb);
+            }
+            buildRowAwareGrid(inWrap, inputsData);
+            block.appendChild(inWrap);
+          }
+
+          const outputsData = g.outputs_rows || g.outputs || [];
+          if (outputsData.length) {
+            const hr = document.createElement("hr");
+            block.appendChild(hr);
+
+            const outLabel = document.createElement("div");
+            outLabel.className = "label";
+            outLabel.textContent = "Outputs";
+            block.appendChild(outLabel);
+
+            const outWrap = document.createElement("div");
+            outWrap.className = "grid";
+            if (g.outputsThumb) {
+              outWrap.style.setProperty("--thumb-h", g.outputsThumb);
+            }
+            buildRowAwareGrid(outWrap, outputsData);
+            block.appendChild(outWrap);
+          }
+
+          gridEl.appendChild(block);
+        }
+      }
+
+      const PART0 = [
+        {
+          label: "0.1–0.2: Calibration Frames & Object Scan",
+          note: "OpenCV's ArUco detector finds each 4×4 tag; valid detections feed batched camera calibration calls.",
+          inputs_rows: [
+            [
+              {
+                src: P("inputs/q0p1/IMG_2955.jpg"),
+                title: "Calibration grid",
+              },
+              {
+                src: P("inputs/q0p2_resized/yoda/IMG_3205.jpg"),
+                title: "Yoda capture",
+              },
+            ],
+          ],
+          outputs: [
+            [
+              {
+                matrix: [
+                  ["Frames inspected", "34"],
+                  ["Usable detections", "TODO"],
+                  ["RMS reprojection error", "TODO"],
+                  [
+                    "Lens undistortion",
+                    "Optimal camera matrix computation + undistort",
+                  ],
+                ],
+              },
+            ],
+          ],
+        },
+      ];
+
+      const PART0_POSE = [
+        {
+          label: "0.3: Camera Frustum Visualizations (Viser)",
+          outputs_rows: [
+            [
+              {
+                src: P("outputs/q0p3/yoda-viser-1.png"),
+                title: "Viser view #1",
+              },
+              {
+                src: P("outputs/q0p3/yoda-viser-2.png"),
+                title: "Viser view #2",
+              },
+            ],
+          ],
+        },
+      ];
+
+      const PART0_DATASET = [
+        {
+          label: "0.4: Undistortion + Dataset Packaging",
+          note: "Frames are undistorted, centered, and resized to 200×200 before saving the dataset splits.",
+          inputs_rows: [
+            [
+              {
+                src: P("inputs/q0p2_resized/yoda/IMG_3230.jpg"),
+                title: "Undistorted crop",
+              },
+            ],
+          ],
+          outputs_rows: [
+            [
+              {
+                matrix: [
+                  ["images_train count", "31"],
+                  ["images_val count", "5"],
+                  ["c2ws_test count", "3"],
+                  ["focal length", "191.88 px"],
+                ],
+                matrixNote:
+                  "Undistorted using OpenCV's undistort functionality; paper corners float slightly because the tag wasn't taped down but the remap stayed stable.",
+              },
+            ],
+          ],
+        },
+      ];
+
+      const PART1_ARCH = [
+        {
+          label: "Architecture & Hyperparameters",
+          note: "Key design choices for the pixel-wise neural field.",
+          outputs: [
+            [
+              {
+                matrix: [
+                  ["Input encoding", "2D coords + L=10 PE (42-D)"],
+                  ["Hidden layers", "4 × 256 ReLU"],
+                  ["Output head", "3-channel Sigmoid"],
+                  ["Batch", "10k random pixels"],
+                  ["Optimizer", "Adam (lr=1e-2)"],
+                  ["Device", "MPS (falls back to CPU)"],
+                ],
+              },
+            ],
+          ],
+        },
+      ];
+
+      const PART1_PROGRESS = [
+        {
+          label: "Provided Test Image (fox)",
+          note: "Random 10k-pixel batches; loss plunges after ≈400 iters as the network captures high frequencies in the provided fox photo.",
+          inputs_rows: [
+            [
+              {
+                src: P("inputs/q1/fox.jpg"),
+                title: "Target (fox)",
+              },
+            ],
+          ],
+          outputs_rows: [
+            [
+              {
+                src: P(
+                  "outputs/q1/fox/10_frequencies_256_layer_width/iter_100.png",
+                ),
+                title: "Iter 100",
+              },
+            ],
+            [
+              {
+                src: P(
+                  "outputs/q1/fox/10_frequencies_256_layer_width/iter_400.png",
+                ),
+                title: "Iter 400",
+              },
+            ],
+            [
+              {
+                src: P(
+                  "outputs/q1/fox/10_frequencies_256_layer_width/iter_800.png",
+                ),
+                title: "Iter 800",
+              },
+            ],
+            [
+              {
+                src: P(
+                  "outputs/q1/fox/10_frequencies_256_layer_width/iter_1500.png",
+                ),
+                title: "Iter 1500",
+              },
+            ],
+          ],
+        },
+        {
+          label: "My Own Image (sand)",
+          note: "Higher frequency grains from my own sand photo train with the same dataloader and MLP.",
+          inputs_rows: [
+            [
+              {
+                src: P("inputs/q1/sand.png"),
+                title: "Target (sand)",
+              },
+            ],
+          ],
+          outputs_rows: [
+            [
+              {
+                src: P(
+                  "outputs/q1/sand/10_frequencies_256_layer_width/iter_100.png",
+                ),
+                title: "Iter 100",
+              },
+            ],
+            [
+              {
+                src: P(
+                  "outputs/q1/sand/10_frequencies_256_layer_width/iter_400.png",
+                ),
+                title: "Iter 400",
+              },
+            ],
+            [
+              {
+                src: P(
+                  "outputs/q1/sand/10_frequencies_256_layer_width/iter_800.png",
+                ),
+                title: "Iter 800",
+              },
+            ],
+            [
+              {
+                src: P(
+                  "outputs/q1/sand/10_frequencies_256_layer_width/iter_1500.png",
+                ),
+                title: "Iter 1500",
+              },
+            ],
+          ],
+        },
+      ];
+
+      const PART1_FINAL_GRID = [
+        {
+          label: "Final Results (2 frequencies × 2 widths)",
+          note: "All renders shown after 1.5k iterations; decreasing L from 10→5 erodes fur detail far more than halving the layer width from 256→128.",
+          outputs_rows: [
+            [
+              {
+                src: P(
+                  "outputs/q1/fox/5_frequencies_128_layer_width/iter_1500.png",
+                ),
+                title: "L=5, width 128",
+              },
+              {
+                src: P(
+                  "outputs/q1/fox/10_frequencies_128_layer_width/iter_1500.png",
+                ),
+                title: "L=10, width 128",
+              },
+            ],
+            [
+              {
+                src: P(
+                  "outputs/q1/fox/5_frequencies_256_layer_width/iter_1500.png",
+                ),
+                title: "L=5, width 256",
+              },
+              {
+                src: P(
+                  "outputs/q1/fox/10_frequencies_256_layer_width/iter_1500.png",
+                ),
+                title: "L=10, width 256",
+              },
+            ],
+          ],
+        },
+      ];
+
+      const PART1_PSNR = [
+        {
+          label: "PSNR Curves",
+          note: "Both runs steadily improve; final values can be filled in once the training logs are refreshed.",
+          outputs_rows: [
+            [
+              {
+                src: P(
+                  "outputs/q1/fox/10_frequencies_256_layer_width/psnr_history.png",
+                ),
+                title: "Fox (L=10, width=256)",
+              },
+            ],
+            [
+              {
+                src: P(
+                  "outputs/q1/sand/10_frequencies_256_layer_width/psnr_history.png",
+                ),
+                title: "Sand (L=10, width=256)",
+              },
+            ],
+          ],
+        },
+      ];
+
+      const PART2_IMPL = [
+        {
+          label: "Sections 2.1–2.3: Rays & Sampling",
+          note: "Core per-ray utilities used for LEGO training.",
+          outputs: [
+            [
+              {
+                matrix: [
+                  [
+                    "Camera frame lift",
+                    "Batched inverse intrinsics on homogeneous UV",
+                  ],
+                  [
+                    "World transform",
+                    "Homogeneous multiply + drop w component",
+                  ],
+                  [
+                    "Ray construction",
+                    "Origin from translation; normalized directions",
+                  ],
+                  ["Per-step rays", "100 rays/image ⇒ 10k rays/iter"],
+                  [
+                    "Samples per ray",
+                    "64 points, stratified with jitter in [2,6]",
+                  ],
+                ],
+              },
+            ],
+          ],
+        },
+        {
+          label: "Sections 2.4–2.5: Network & Volume Rendering",
+          note: "Key architectural pieces for the NeRF and its renderer.",
+          outputs: [
+            [
+              {
+                matrix: [
+                  ["Location PE", "L=12 ⇒ 75-D xyz encoding"],
+                  ["Direction PE", "L=12 ⇒ 75-D view encoding"],
+                  ["Main trunk", "8×256 ReLU with skip @ layer 5"],
+                  ["Density head", "Linear → ReLU (σ ≥ 0)"],
+                  ["Color head", "Condition on ray dir; Sigmoid RGB"],
+                  [
+                    "Volume renderer",
+                    "einsum accumulation with cumulative transmittance",
+                  ],
+                  ["Optimizer", "Adam (lr=5e-4)"],
+                ],
+              },
+            ],
+          ],
+        },
+      ];
+
+      const PART2_RAYVIS = [
+        {
+          label: "Camera, Rays, and Samples (LEGO)",
+          outputs_rows: [
+            [
+              {
+                src: P("outputs/q2/lego/lego-viser-ray-single-camera.png"),
+                title: "Single camera + rays",
+              },
+              {
+                src: P("outputs/q2/lego/lego-viser-ray-multiple-cameras.png"),
+                title: "Multiple cameras + rays",
+              },
+            ],
+          ],
+        },
+      ];
+
+      const PART2_PROGRESS = [
+        {
+          label: "Predicted LEGO Images",
+          note: "Each frame shows the model's render of a training camera (left) and validation camera (right).",
+          outputs_rows: [
+            [
+              {
+                src: P("outputs/q2/lego/train/_ground_truth.png"),
+                title: "Ground Truth (Train)",
+              },
+              {
+                src: P("outputs/q2/lego/val/_ground_truth.png"),
+                title: "Ground Truth (Val)",
+              },
+            ],
+            [
+              {
+                src: P("outputs/q2/lego/train/iter_40_predicted.png"),
+                title: "One Train Image on Iteration 40",
+              },
+              {
+                src: P("outputs/q2/lego/val/iter_40_predicted.png"),
+                title: "One Validation Image on Iteration 40",
+              },
+            ],
+            [
+              {
+                src: P("outputs/q2/lego/train/iter_160_predicted.png"),
+                title: "One Train Image on Iteration 160",
+              },
+              {
+                src: P("outputs/q2/lego/val/iter_160_predicted.png"),
+                title: "One Validation Image on Iteration 160",
+              },
+            ],
+            [
+              {
+                src: P("outputs/q2/lego/train/iter_400_predicted.png"),
+                title: "One Train Image on Iteration 400",
+              },
+              {
+                src: P("outputs/q2/lego/val/iter_400_predicted.png"),
+                title: "One Validation Image on Iteration 400",
+              },
+            ],
+            [
+              {
+                src: P("outputs/q2/lego/train/iter_1280_predicted.png"),
+                title: "One Train Image on Iteration 1280",
+              },
+              {
+                src: P("outputs/q2/lego/val/iter_1280_predicted.png"),
+                title: "One Validation Image on Iteration 1280",
+              },
+            ],
+            [
+              {
+                src: P("outputs/q2/lego/train/iter_1960_predicted.png"),
+                title: "One Train Image on Iteration 1960",
+              },
+              {
+                src: P("outputs/q2/lego/val/iter_1960_predicted.png"),
+                title: "One Validation Image on Iteration 1960",
+              },
+            ],
+          ],
+        },
+      ];
+
+      const PART2_METRICS = [
+        {
+          label: "Validation Metrics",
+          note: "Validation PSNR crosses the 23 dB requirement; loss curves are shown on their own rows for clarity.",
+          outputs_rows: [
+            [
+              {
+                src: P("outputs/q2/lego/val_psnr_history.png"),
+                title: "Validation PSNR (>23 dB)",
+              },
+            ],
+            [
+              {
+                src: P("outputs/q2/lego/train_loss_history.png"),
+                title: "Training loss",
+              },
+            ],
+            [
+              {
+                src: P("outputs/q2/lego/val_loss_history.png"),
+                title: "Validation loss",
+              },
+            ],
+          ],
+        },
+      ];
+
+      const PART2_VIDEO = [
+        {
+          label: "Spherical Render (c2ws_test)",
+          note: "Looping GIF rendered on unseen test camera poses (c2ws_test), demonstrating novel view synthesis.",
+          outputs_rows: [
+            [
+              {
+                src: P("outputs/q2/lego/infinite_predicted_images.gif"),
+                title: "Novel view sweep (unseen test poses)",
+              },
+            ],
+          ],
+        },
+      ];
+
+      const PART26_RAYVIS = [
+        {
+          label: "Camera, Rays, and Samples (Yoda)",
+          note: "Visualization of camera poses, sampled rays, and stratified point samples along rays for the Yoda dataset.",
+          outputs_rows: [
+            [
+              {
+                src: P("outputs/q2/yoda/yoda-viser-rays-one-camera.png"),
+                title: "One camera + rays",
+              },
+              {
+                src: P("outputs/q2/yoda/yoda-viser-rays-multiple-cameras.png"),
+                title: "Multiple cameras + rays",
+              },
+            ],
+          ],
+        },
+      ];
+
+      const PART26_PROGRESS = [
+        {
+          label: "Custom Yoda NeRF",
+          note: "Configuration tweaks: near=0.02, far=0.5, 250 rays/image, 64 samples/ray, 6k iterations. GIF shows novel view synthesis on unseen test camera poses. Note Yoda's shiny head reflects light, creating view-dependent specular highlights.",
+          outputs_rows: [
+            [
+              {
+                src: P("outputs/q2/yoda/infinite_predicted_images.gif"),
+                title: "Orbital GIF (unseen test poses)",
+              },
+            ],
+            [
+              {
+                src: P("outputs/q2/yoda/val/_ground_truth.png"),
+                title: "Ground Truth (Val)",
+              },
+            ],
+            [
+              {
+                src: P("outputs/q2/yoda/val/iter_40_predicted.png"),
+                title: "Iter 40",
+              },
+            ],
+            [
+              {
+                src: P("outputs/q2/yoda/val/iter_400_predicted.png"),
+                title: "Iter 400",
+              },
+            ],
+            [
+              {
+                src: P("outputs/q2/yoda/val/iter_1200_predicted.png"),
+                title: "Iter 1200",
+              },
+            ],
+            [
+              {
+                src: P("outputs/q2/yoda/val/iter_2000_predicted.png"),
+                title: "Iter 2000",
+              },
+            ],
+            [
+              {
+                src: P("outputs/q2/yoda/val/iter_4000_predicted.png"),
+                title: "Iter 4000",
+              },
+            ],
+          ],
+        },
+      ];
+
+      const PART26_LOSS = [
+        {
+          label: "Training Diagnostics",
+          note: "Separate plots make it easier to track convergence over 6k iterations.",
+          outputs_rows: [
+            [
+              {
+                src: P("outputs/q2/yoda/train_loss_history.png"),
+                title: "Training loss",
+              },
+            ],
+            [
+              {
+                src: P("outputs/q2/yoda/val_loss_history.png"),
+                title: "Validation loss",
+              },
+            ],
+            [
+              {
+                src: P("outputs/q2/yoda/val_psnr_history.png"),
+                title: "Validation PSNR",
+              },
+            ],
+          ],
+        },
+      ];
+
+      (function init() {
+        buildGrouped(document.getElementById("part0-grid"), PART0);
+        buildGrouped(document.getElementById("part0-pose-grid"), PART0_POSE);
+        buildGrouped(
+          document.getElementById("part0-dataset-grid"),
+          PART0_DATASET,
+        );
+        buildGrouped(document.getElementById("part1-arch-grid"), PART1_ARCH);
+        buildGrouped(
+          document.getElementById("part1-progress-grid"),
+          PART1_PROGRESS,
+        );
+        buildGrouped(
+          document.getElementById("part1-final-grid"),
+          PART1_FINAL_GRID,
+        );
+        buildGrouped(document.getElementById("part1-psnr-grid"), PART1_PSNR);
+        buildGrouped(document.getElementById("part2-impl-grid"), PART2_IMPL);
+        buildGrouped(
+          document.getElementById("part2-rayvis-grid"),
+          PART2_RAYVIS,
+        );
+        buildGrouped(
+          document.getElementById("part2-progress-grid"),
+          PART2_PROGRESS,
+        );
+        buildGrouped(
+          document.getElementById("part2-metrics-grid"),
+          PART2_METRICS,
+        );
+        buildGrouped(document.getElementById("part2-video-grid"), PART2_VIDEO);
+        buildGrouped(
+          document.getElementById("part26-rayvis-grid"),
+          PART26_RAYVIS,
+        );
+        buildGrouped(
+          document.getElementById("part26-progress-grid"),
+          PART26_PROGRESS,
+        );
+        buildGrouped(document.getElementById("part26-loss-grid"), PART26_LOSS);
+      })();
+    </script>
+  </body>
+</html>
