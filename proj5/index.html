@@ -386,8 +386,7 @@
           <p><strong>Flow matching + sampling</strong></p>
           <p>
             Training/sampling mirror Algorithms B.1–B.4 from the handout (spec*
-            cards below). TODO swap in any missing diagram if required by the
-            grader.
+            cards below).
           </p>
         </div>
 
@@ -406,9 +405,8 @@
           A shallow UNet trains with MSE on noisy/clean pairs; every batch is
           re-noised each epoch so the model learns the mapping, not the specific
           corruption. Loss curves track convergence, and test samples show
-          denoising at σ=0.5. TODO add explicit epoch-1 sample grid to satisfy
-          the “after 1st and 5th epoch” deliverable; current samples are after
-          the final epoch. Spec UNet/loss references are below.
+          denoising at σ=0.5 after epoch 1 and epoch 5 (deliverable). Spec
+          UNet/loss references are below.
         </p>
         <div id="denoiser-spec-grid" class="grid"></div>
         <div id="denoiser-grid" class="grid"></div>
@@ -437,8 +435,7 @@
           x_t via linear interpolation with noise, ask the UNet to predict the
           flow vector, and step optimizer. Sampling starts from noise at t=1 and
           repeatedly uses the predicted flow to move toward digits as t lowers.
-          TODO add the training loss curve (deliverable asks for it). Spec
-          architecture/equations/loops are below.
+          Spec architecture/equations/loops are below.
         </p>
         <div id="timecond-spec-grid" class="grid"></div>
         <div id="timecond-grid" class="grid"></div>
@@ -660,34 +657,6 @@
         items._pair = true;
         return items;
       };
-
-      // const PROMPTS = [
-      //   {
-      //     label: "Prompts and seed",
-      //     outputs: [
-      //       [
-      //         {
-      //           matrix: [
-      //             ["Seed", "162"],
-      //             [
-      //               "Prompt list",
-      //               "a car driving through the mountains; a snowy village; a happy dog; a plane; a house; a red shirt; a laptop; a beach; a beautiful sunset; a rainforest; a photo of a cat/tiger/polar bear/snowman/waterfall/face/skull/blueberry muffin/dog",
-      //             ],
-      //             [
-      //               "Illusion prompts",
-      //               "a red shirt ↔ a beautiful sunset; TODO second prompt pair; a snowy village ↔ a plane",
-      //             ],
-      //             [
-      //               "Hybrid prompts",
-      //               "a photo of a blueberry muffin ↔ a photo of a dog; a photo of a face ↔ a photo of a waterfall; a photo of a skull ↔ a photo of a polar bear",
-      //             ],
-      //           ],
-      //           matrixNote: "",
-      //         },
-      //       ],
-      //     ],
-      //   },
-      // ];
 
       const SPEC_FORWARD = [
         {
@@ -1452,7 +1421,7 @@
 
       const TEXTEDIT = [
         {
-          label: "Campanile → rocket ship (text guided)",
+          label: "Applying 'a rocket ship' to the following image:",
           inputs_rows: [
             [
               {
@@ -1507,7 +1476,7 @@
           ],
         },
         {
-          label: "Boat → snowy village",
+          label: "Applying 'a snowy village' to the following image:",
           inputs_rows: [
             [
               {
@@ -1560,7 +1529,8 @@
           ],
         },
         {
-          label: "Tree → car in mountains",
+          label:
+            "Applying 'a car driving through the mountains' to the following image:",
           inputs_rows: [
             [
               {
@@ -1774,39 +1744,73 @@
         },
         {
           label: "Epoch 1 samples (σ=0.5)",
-          note: "TODO capture test digits after 1 epoch (deliverable).",
           outputs_rows: [
             [
               {
-                title: "TODO epoch 1 grid",
-                note: "Add five denoised test digits at σ=0.5 after epoch 1.",
+                src: P(
+                  "outputs/part_b/q1/q2/q1/epoch1_testimage_noise0.5_0.png",
+                ),
+                title: "Sample 0",
+              },
+              {
+                src: P(
+                  "outputs/part_b/q1/q2/q1/epoch1_testimage_noise0.5_1.png",
+                ),
+                title: "Sample 1",
+              },
+              {
+                src: P(
+                  "outputs/part_b/q1/q2/q1/epoch1_testimage_noise0.5_2.png",
+                ),
+                title: "Sample 2",
+              },
+              {
+                src: P(
+                  "outputs/part_b/q1/q2/q1/epoch1_testimage_noise0.5_3.png",
+                ),
+                title: "Sample 3",
+              },
+              {
+                src: P(
+                  "outputs/part_b/q1/q2/q1/epoch1_testimage_noise0.5_4.png",
+                ),
+                title: "Sample 4",
               },
             ],
           ],
         },
         {
           label: "Epoch 5 samples (σ=0.5)",
-          note: "Current outputs assumed to be final/epoch 5; TODO confirm timing.",
           outputs_rows: [
             [
               {
-                src: P("outputs/part_b/q1/q2/q1/testimage_noise0.5_0.png"),
+                src: P(
+                  "outputs/part_b/q1/q2/q1/epoch5_testimage_noise0.5_0.png",
+                ),
                 title: "Sample 0",
               },
               {
-                src: P("outputs/part_b/q1/q2/q1/testimage_noise0.5_1.png"),
+                src: P(
+                  "outputs/part_b/q1/q2/q1/epoch5_testimage_noise0.5_1.png",
+                ),
                 title: "Sample 1",
               },
               {
-                src: P("outputs/part_b/q1/q2/q1/testimage_noise0.5_2.png"),
+                src: P(
+                  "outputs/part_b/q1/q2/q1/epoch5_testimage_noise0.5_2.png",
+                ),
                 title: "Sample 2",
               },
               {
-                src: P("outputs/part_b/q1/q2/q1/testimage_noise0.5_3.png"),
+                src: P(
+                  "outputs/part_b/q1/q2/q1/epoch5_testimage_noise0.5_3.png",
+                ),
                 title: "Sample 3",
               },
               {
-                src: P("outputs/part_b/q1/q2/q1/testimage_noise0.5_4.png"),
+                src: P(
+                  "outputs/part_b/q1/q2/q1/epoch5_testimage_noise0.5_4.png",
+                ),
                 title: "Sample 4",
               },
             ],
@@ -1946,11 +1950,11 @@
       const TIMECOND = [
         {
           label: "Training curve (time-conditioned UNet)",
-          note: "TODO add loss vs iteration/epoch plot (deliverable).",
           outputs_rows: [
             [
               {
-                title: "TODO loss curve",
+                src: P("outputs/part_b/q2/q3/training_curve.png"),
+                title: "Loss curve",
                 note: "Plot training loss for the time-conditioned UNet.",
               },
             ],
