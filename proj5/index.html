@@ -209,36 +209,33 @@
       <section id="overview" class="section">
         <h2>Overview</h2>
         <p>
-          This round shifts from NeRFs to generative diffusion. Part A builds
-          custom sampling loops on DeepFloyd IF: forward noise, one-step and
-          iterative reverse steps, CFG, SDEdit, inpainting, and prompt-to-prompt
-          illusions straight from the spec so each deliverable maps to a concrete
-          loop. Part B mirrors the handout’s training flow: start with a
-          single-step denoiser, add time conditioning for flow matching, then add
-          class conditioning plus classifier-free guidance and a scheduler
-          ablation.
+          This round shifts from NeRFs to generative diffusion. Part A rebuilds
+          the handout’s DeepFloyd IF loops: forward noising, one-step and
+          strided reverse steps, CFG, SDEdit, inpainting, visual anagrams, and
+          hybrids. Part B follows the flow-matching notebook: MNIST single-step
+          denoiser, time-conditioned UNet, class conditioning with CFG, and a
+          no-scheduler ablation. Every section below maps to a spec deliverable;
+          TODO tags mark anything I still need to drop in (algorithms, missing
+          grids, prompt captions).
         </p>
-        <div class="eqs">
-          <p><strong>Algorithm cards</strong></p>
-          <p>Spec snippets for reference (pulled from the handout).</p>
-        </div>
-        <div id="spec-grid" class="grid"></div>
       </section>
 
       <section id="partA" class="section">
         <h2>Part A: DeepFloyd Diffusion Loops</h2>
         <p>
           Notebook code mirrors the spec: cache prompt embeddings, seed once,
-          implement forward noise and reverse steps, and keep the stride-based
-          scheduler for iterative sampling. CFG doubles the UNet calls each
-          step, and inpainting/SDEdit reuse the same loop with masks or noisy
-          starts.
+          implement forward noise, and then reverse with either one-step or a
+          strided 990→0 schedule (Δt=30). CFG doubles the UNet passes per step
+          (conditional + unconditional), while SDEdit and inpainting reuse the
+          same reverse loop with noisy starts or masks to constrain edits.
         </p>
         <div class="eqs">
           <p><strong>Guidance + sampling</strong></p>
           <p>
-            TODO add the provided diagrams for forward, reverse, CFG, and
-            SD-Edit.
+            Forward and reverse updates come straight from the provided
+            equations (see spec cards). CFG combines conditional/unconditional
+            noise, SDEdit just starts later in the strided list, and inpainting
+            clamps unmasked pixels back to the original with matched noise.
           </p>
         </div>
 
@@ -247,18 +244,21 @@
           Part 0 follows the setup cell in the notebook: load the provided T5
           cache for prompt embeddings and lock seed 162 for everything (forward
           noise, CFG, SDEdit, inpainting) so side-by-side grids stay aligned.
-          TODO: list the exact text prompts used for illusions and hybrids.
+          Prompt pool: a car driving through the mountains, a snowy village, a
+          happy dog, a plane, a house, a red shirt, a laptop, a beach, a
+          beautiful sunset, a rainforest, a photo of a cat/tiger/polar
+          bear/snowman/waterfall/face/skull/blueberry muffin/dog.
         </p>
         <div id="prompt-grid" class="grid"></div>
 
         <h3>1.1 Forward Process</h3>
         <p>
-          Forward noise follows the spec: scale the image by
-          \(\sqrt{\alpha_{\text{cum}}}\) and add Gaussian noise with
-          \(\sqrt{1-\alpha_{\text{cum}}}\) at each chosen timestep. This exactly
-          matches the provided forward() equation; the t=250/500/750 plots show
-          the smooth march toward pure noise.
+          Forward noise follows the spec recipe: pick timestep t, scale the
+          clean image by \(\sqrt{\alpha_{\text{cum}}[t]}\), add Gaussian noise
+          scaled by \(\sqrt{1-\alpha_{\text{cum}}[t]}\), and repeat for each t.
+          The t=250/500/750 plots show the smooth march toward pure noise.
         </p>
+        <div id="forward-spec-grid" class="grid"></div>
         <div id="forward-grid" class="grid"></div>
 
         <h3>1.2 Classical Gaussian Denoising</h3>
@@ -276,34 +276,38 @@
           timestep, and neutral prompt embedding to stage_1.unet, take the first
           three channels of its output as the noise estimate, and reconstruct
           with the closed-form update (Eq. A.2). It cleans light noise but
-          falters as t increases.
+          falters as t increases, which is why the iterative schedule is also
+          shown per the deliverable.
         </p>
         <div id="onestep-grid" class="grid"></div>
 
         <h3>1.4 Iterative Denoising</h3>
         <p>
-          Use a strided schedule from 990→0 (step 30). Each step predicts noise,
-          blends signal/noise with the alphas, and reintroduces variance with
-          the helper so the chain stays on the diffusion trajectory. This follows
-          the strided timetable and update in the spec; the final result is
-          noticeably sharper than the one-step or Gaussian baselines.
+          Start at t=990 and stride down by 30 to 0. At each step: run the UNet
+          to predict noise, compute the next cleaner image using the alpha_bar
+          weights (signal vs. noise blend), add the prescribed variance term,
+          then continue to the next timestep. This mirrors the spec update; the
+          final is sharper than one-step or Gaussian baselines.
         </p>
+        <div id="iterative-spec-grid" class="grid"></div>
         <div id="iterative-grid" class="grid"></div>
 
         <h3>1.5 Sampling from Noise</h3>
         <p>
           Start from pure Gaussian noise at the highest timestep and run the
           same iterative loop with the neutral prompt. This is pure generation
-          without CFG to keep diversity.
+          without CFG to keep diversity; the spec calls for five samples.
         </p>
         <div id="sample-grid" class="grid"></div>
 
         <h3>1.6 Classifier-Free Guidance</h3>
         <p>
-          Two UNet passes per step—one with the prompt, one empty—and blend
-          their noise estimates with cfg=7.5. Guidance tightens alignment to the
-          text while sacrificing some variation.
+          Run the UNet twice per step: once with the prompt, once with an empty
+          prompt. Mix the noise predictions as noise_guided = noise_cond + cfg *
+          (noise_cond − noise_uncond) with cfg=7, then apply the usual reverse
+          update. This strengthens prompt adherence while reducing diversity.
         </p>
+        <div id="cfg-spec-grid" class="grid"></div>
         <div id="cfg-grid" class="grid"></div>
 
         <h3>1.7 SDEdit: Image-to-Image</h3>
@@ -316,9 +320,10 @@
 
         <h3>1.7.1 Web + Hand-Drawn Edits</h3>
         <p>
-          Apply the same SDEdit loop to web images and doodles after center
-          cropping/resizing to square. Low noise keeps the original recognizable
-          while higher noise forces the model to hallucinate more detail.
+          Apply the same SDEdit loop to one web image and at least two doodles
+          after center cropping/resizing to square (deliverable requirement).
+          Low noise keeps the original recognizable while higher noise forces
+          the model to hallucinate more detail.
         </p>
         <div id="handdrawn-grid" class="grid"></div>
 
@@ -326,9 +331,11 @@
         <p>
           At every reverse step, clamp unmasked pixels back to the original
           image re-noised for the current t and let the model redraw only the
-          masked hole. This keeps surrounding context fixed while filling the
-          gap.
+          masked hole. Steps: run a reverse step, replace unmasked regions with
+          the source image plus matching noise for that timestep, then proceed
+          to the next t. This keeps context fixed while filling the gap.
         </p>
+        <div id="inpaint-spec-grid" class="grid"></div>
         <div id="inpaint-grid" class="grid"></div>
 
         <h3>1.7.3 Text-Conditional Edits</h3>
@@ -344,7 +351,11 @@
           At each step, denoise both the image and its 180° flip with two
           different prompts, average their noise predictions, and continue the
           reverse chain. Upright and flipped views emphasize different prompts.
+          Recipe: run UNet on the image with prompt A, on the flipped image with
+          prompt B, flip B’s noise back, average the two noises, then apply the
+          reverse step.
         </p>
+        <div id="illusion-spec-grid" class="grid"></div>
         <div id="illusion-grid" class="grid"></div>
 
         <h3>1.9 Hybrid Images</h3>
@@ -352,8 +363,14 @@
           Split the predicted noise into low-pass and high-pass via Gaussian
           blur, keep lows from one prompt and highs from another, then combine
           for the reverse update. Tiny thumbnails hint at the low-frequency read
-          while the full images show the merged hybrid.
+          while the full images show the merged hybrid. Low↔high pairs: a photo
+          of a blueberry muffin ↔ a photo of a dog, a photo of a face ↔ a photo
+          of a waterfall, a photo of a skull ↔ a photo of a polar bear. Steps:
+          UNet with prompt A → blur for low-pass; UNet with prompt B → subtract
+          blurred to get high-pass; add lows + highs, then run the reverse
+          update.
         </p>
+        <div id="hybrid-spec-grid" class="grid"></div>
         <div id="hybrid-grid" class="grid"></div>
       </section>
 
@@ -367,15 +384,21 @@
         </p>
         <div class="eqs">
           <p><strong>Flow matching + sampling</strong></p>
-          <p>TODO add Algorithm B diagrams for training and sampling.</p>
+          <p>
+            Training/sampling mirror Algorithms B.1–B.4 from the handout (spec*
+            cards below). TODO swap in any missing diagram if required by the
+            grader.
+          </p>
         </div>
 
         <h3>1.1 Noising Process</h3>
         <p>
           Each MNIST digit is corrupted with Gaussian noise at a sampled scale
-          so the denoiser sees a range of inputs. Visualizing multiple σ values
-          sets expectations for what the UNet must undo.
+          so the denoiser sees a range of inputs (per Algorithm B.2 noising
+          step). Visualizing multiple σ values sets expectations for what the
+          UNet must undo. Spec noising diagram is below.
         </p>
+        <div id="noising-spec-grid" class="grid"></div>
         <div id="noiseproc-grid" class="grid"></div>
 
         <h3>1.2 Single-Step Denoiser</h3>
@@ -383,8 +406,11 @@
           A shallow UNet trains with MSE on noisy/clean pairs; every batch is
           re-noised each epoch so the model learns the mapping, not the specific
           corruption. Loss curves track convergence, and test samples show
-          denoising at σ=0.5.
+          denoising at σ=0.5. TODO add explicit epoch-1 sample grid to satisfy
+          the “after 1st and 5th epoch” deliverable; current samples are after
+          the final epoch. Spec UNet/loss references are below.
         </p>
+        <div id="denoiser-spec-grid" class="grid"></div>
         <div id="denoiser-grid" class="grid"></div>
 
         <h3>1.2.2 Out-of-Distribution Noise</h3>
@@ -397,33 +423,46 @@
 
         <h3>1.2.3 Denoising Pure Noise</h3>
         <p>
-          Retrain the same UNet to map pure noise toward digits. Early epochs
-          converge toward blurry class means; later epochs sharpen as the model
-          learns a prior over digits without any clean input.
+          Retrain the same UNet to map pure noise toward digits. The outputs
+          look like an average of several digits; MSE likely pushes predictions
+          toward the dataset mean when there is no conditioning signal.
         </p>
         <div id="purenoise-grid" class="grid"></div>
 
         <h3>2.3 Time-Conditioned Flow Matching</h3>
         <p>
           Inject normalized time into the UNet via small FC blocks, sample a
-          random t each batch, and train the network to predict the flow
-          back toward clean data. Sampling starts from noise and steps t
-          downward, showing digits emerge over epochs.
+          random t each batch, and train the network to predict the flow back
+          toward clean data. Training loop: pick an image x, draw a t, create
+          x_t via linear interpolation with noise, ask the UNet to predict the
+          flow vector, and step optimizer. Sampling starts from noise at t=1 and
+          repeatedly uses the predicted flow to move toward digits as t lowers.
+          TODO add the training loss curve (deliverable asks for it). Spec
+          architecture/equations/loops are below.
         </p>
+        <div id="timecond-spec-grid" class="grid"></div>
         <div id="timecond-grid" class="grid"></div>
 
         <h3>2.6 Class-Conditioned Sampling</h3>
         <p>
-          Add one-hot class conditioning with dropout so classifier-free
-          guidance is possible; sampling uses cfg to bias toward the requested
-          digit. Results improve faster than the time-only model.
+          Add one-hot class conditioning with dropout (10% of the time, class
+          conditioning vector was set to 0) so classifier-free guidance is
+          possible; sampling uses cfg to bias toward the requested digit. During
+          training, sometimes drop the class vector to enable CFG. During
+          sampling, run conditional and unconditional passes, blend with a
+          guidance scale, and step the reverse process. Results improve faster
+          than time-only. Spec CFG sampling loop is below. CFG scale=5 was used.
         </p>
+        <div id="classcond-spec-grid" class="grid"></div>
         <div id="classcond-grid" class="grid"></div>
 
         <h3>Scheduler Ablation</h3>
         <p>
           Same class-conditioned setup but remove the LR decay. Curves and grids
-          show how training behaves without the scheduler.
+          show how training behaves without the scheduler. To compensate for the
+          lack of scheduler, the learning rate was decreased to 2e-3 to mimic an
+          "in the middle" learning rate value that would have been reached had
+          the scheduler still been present.
         </p>
         <div id="nosched-grid" class="grid"></div>
       </section>
@@ -434,10 +473,9 @@
           Diffusion felt more forgiving than NeRFs: after wiring stride,
           variance, and CFG correctly, swapping prompts or masks produced stable
           outputs. Inpainting and SDEdit were the most satisfying because the
-          same reverse loop could handle edits with minimal code change. Flow
-          matching on MNIST is tiny by comparison, but conditioning on time and
-          class made the guidance math concrete and visibly sped convergence.
-          TODO: add any final notes after longer runs.
+          same reverse loop could handle edits with minimal code change. For
+          flow matching, conditioning on time and class made the guidance math
+          concrete and visibly sped convergence.
         </p>
       </section>
     </main>
@@ -623,49 +661,215 @@
         return items;
       };
 
-      const PROMPTS = [
+      // const PROMPTS = [
+      //   {
+      //     label: "Prompts and seed",
+      //     outputs: [
+      //       [
+      //         {
+      //           matrix: [
+      //             ["Seed", "162"],
+      //             [
+      //               "Prompt list",
+      //               "a car driving through the mountains; a snowy village; a happy dog; a plane; a house; a red shirt; a laptop; a beach; a beautiful sunset; a rainforest; a photo of a cat/tiger/polar bear/snowman/waterfall/face/skull/blueberry muffin/dog",
+      //             ],
+      //             [
+      //               "Illusion prompts",
+      //               "a red shirt ↔ a beautiful sunset; TODO second prompt pair; a snowy village ↔ a plane",
+      //             ],
+      //             [
+      //               "Hybrid prompts",
+      //               "a photo of a blueberry muffin ↔ a photo of a dog; a photo of a face ↔ a photo of a waterfall; a photo of a skull ↔ a photo of a polar bear",
+      //             ],
+      //           ],
+      //           matrixNote: "",
+      //         },
+      //       ],
+      //     ],
+      //   },
+      // ];
+
+      const SPEC_FORWARD = [
         {
-          label: "Prompts and seed",
-          outputs: [
+          label: "Spec: Forward process",
+          outputs_rows: [
             [
               {
-                matrix: [
-                  ["Seed", "162"],
-                ],
-                matrixNote: "",
+                src: P("outputs/part_a/q1/q1/spec_forwardprocess_A1_A2.png"),
+                title: "Forward process formula",
               },
             ],
           ],
         },
       ];
 
-      const SPEC = [
+      const SPEC_ITERATIVE = [
         {
-          label: "Spec snippets (Part B)",
-          note: "UNet and tensor ops from the handout.",
+          label: "Spec: Iterative denoising",
           outputs_rows: [
             [
-              { src: P("outputs/part_b/q1/spec_unet_Figure1.png"), title: "UNet (Figure 1)" },
-              { src: P("outputs/part_b/q1/spec_tensorops_Figure2.png"), title: "Tensor ops (Figure 2)" },
+              {
+                src: P(
+                  "outputs/part_a/q1/q4/spec_iterative_denoising_formula_A4.png",
+                ),
+                title: "Iterative denoising update",
+              },
+              {
+                src: P("outputs/part_a/q1/q4/spec_interpolation_figure.png"),
+                title: "Interpolation diagram",
+              },
             ],
           ],
         },
+      ];
+
+      const SPEC_CFG = [
         {
-          label: "Spec formulas (flow matching)",
+          label: "Spec: Classifier-free guidance",
           outputs_rows: [
             [
-              { src: P("outputs/part_b/q2/spec_interpolation_B3.png"), title: "Interpolation (Eq. B3)" },
-              { src: P("outputs/part_b/q2/spec_velocity_formula_B4.png"), title: "Velocity (Eq. B4)" },
-              { src: P("outputs/part_b/q2/spec_learning_objective_B5.png"), title: "Objective (Eq. B5)" },
+              {
+                src: P("outputs/part_a/q1/q6/spec_CFGformula_A4.png"),
+                title: "CFG blend",
+              },
             ],
           ],
         },
+      ];
+
+      const SPEC_INPAINT = [
         {
-          label: "Spec algorithms",
+          label: "Spec: Inpainting clamp",
           outputs_rows: [
             [
-              { src: P("outputs/part_b/q2/spec_algorithm_B1.png"), title: "Algorithm B.1 (training)" },
-              { src: P("outputs/part_b/q1/spec_loss_formula_B1.png"), title: "Loss (single-step denoiser)" },
+              {
+                src: P("outputs/part_a/q1/q7/spec_inpainting_formula_A5.png"),
+                title: "Inpainting constraint",
+              },
+            ],
+          ],
+        },
+      ];
+
+      const SPEC_ILLUSION = [
+        {
+          label: "Spec: Visual anagrams",
+          outputs_rows: [
+            [
+              {
+                src: P("outputs/part_a/q1/q8/spec_visualanagrams_formula.png"),
+                title: "Prompt-to-prompt flip",
+              },
+            ],
+          ],
+        },
+      ];
+
+      const SPEC_HYBRID = [
+        {
+          label: "Spec: Hybrid images",
+          outputs_rows: [
+            [
+              {
+                src: P("outputs/part_a/q1/q9/spec_hybrid_images_formula.png"),
+                title: "Low/high split",
+              },
+            ],
+          ],
+        },
+      ];
+
+      const SPEC_NOISING = [
+        {
+          label: "Spec: Noising process",
+          outputs_rows: [
+            [
+              {
+                src: P("outputs/part_b/q1/q2/spec_noising_process_B2.png"),
+                title: "Noising process",
+              },
+            ],
+          ],
+        },
+      ];
+
+      const SPEC_DENOISER = [
+        {
+          label: "Spec: Single-step UNet + loss",
+          outputs_rows: [
+            [
+              {
+                src: P("outputs/part_b/q1/spec_unet_Figure1.png"),
+                title: "UNet architecture",
+              },
+              {
+                src: P("outputs/part_b/q1/spec_tensorops_Figure2.png"),
+                title: "Tensor ops",
+              },
+            ],
+            [
+              {
+                src: P("outputs/part_b/q1/spec_loss_formula_B1.png"),
+                title: "Loss",
+              },
+            ],
+          ],
+        },
+      ];
+
+      const SPEC_TIMECOND = [
+        {
+          label: "Spec: Time-conditioned flow matching",
+          outputs_rows: [
+            [
+              {
+                src: P(
+                  "outputs/part_b/q2/q1/spec_timeconditioned_unet_Figure4.png",
+                ),
+                title: "Time-conditioned UNet",
+              },
+              {
+                src: P("outputs/part_b/q2/q1/spec_FCBlock_Figure5.png"),
+                title: "FCBlock",
+              },
+            ],
+            [
+              {
+                src: P("outputs/part_b/q2/spec_interpolation_B3.png"),
+                title: "Interpolation",
+              },
+              {
+                src: P("outputs/part_b/q2/spec_velocity_formula_B4.png"),
+                title: "Velocity",
+              },
+              {
+                src: P("outputs/part_b/q2/spec_learning_objective_B5.png"),
+                title: "Objective",
+              },
+            ],
+            [
+              {
+                src: P("outputs/part_b/q2/spec_algorithm_B1.png"),
+                title: "Training loop",
+              },
+              {
+                src: P("outputs/part_b/q2/q3/spec_algorithm_B2.png"),
+                title: "Sampling loop",
+              },
+            ],
+          ],
+        },
+      ];
+
+      const SPEC_CLASSCOND = [
+        {
+          label: "Spec: Class-conditional CFG sampling",
+          outputs_rows: [
+            [
+              {
+                src: P("outputs/part_b/q2/q6/spec_algorithm_B4.png"),
+                title: "CFG sampling",
+              },
             ],
           ],
         },
@@ -852,7 +1056,7 @@
 
       const CFG = [
         {
-          label: "Classifier-free guidance (cfg=7.5)",
+          label: "Classifier-free guidance (cfg=7)",
           note: "Conditional + unconditional passes; stronger prompt pull.",
           outputs_rows: [
             pairRow([
@@ -1415,18 +1619,18 @@
       const ILLUSIONS = [
         {
           label: "Prompt-to-prompt illusions",
-          note: "Each pair shows the render and the upside-down view. TODO fill in exact prompts used.",
+          note: "Each pair shows the render and the upside-down view. ",
           outputs_rows: [
             pairRow([
               {
                 src: P("outputs/part_a/q1/q8/redshirt_beautifulsunset.png"),
                 title: "Illusion 1",
-                subtitle: "Prompt: TODO",
+                subtitle: "Upright prompt: a red shirt",
               },
               {
                 src: P("outputs/part_a/q1/q8/redshirt_beautifulsunset.png"),
                 title: "Flipped",
-                subtitle: "Prompt: TODO",
+                subtitle: "Flip prompt: a beautiful sunset",
                 figureClass: ["rot-180"],
               },
             ]),
@@ -1434,12 +1638,13 @@
               {
                 src: P("outputs/part_a/q1/q8/man_fire.png"),
                 title: "Illusion 2",
-                subtitle: "Prompt: TODO",
+                subtitle: "Upright prompt: An Oil Painting of an Old Man",
               },
               {
                 src: P("outputs/part_a/q1/q8/man_fire.png"),
                 title: "Flipped",
-                subtitle: "Prompt: TODO",
+                subtitle:
+                  "Flip prompt: An Oil Painting of People around a Campfire",
                 figureClass: ["rot-180"],
               },
             ]),
@@ -1447,12 +1652,12 @@
               {
                 src: P("outputs/part_a/q1/q8/snowyvillage_plane.png"),
                 title: "Illusion 3",
-                subtitle: "Prompt: TODO",
+                subtitle: "Upright prompt: a snowy village",
               },
               {
                 src: P("outputs/part_a/q1/q8/snowyvillage_plane.png"),
                 title: "Flipped",
-                subtitle: "Prompt: TODO",
+                subtitle: "Flip prompt: a plane",
                 figureClass: ["rot-180"],
               },
             ]),
@@ -1463,7 +1668,7 @@
       const HYBRIDS = [
         {
           label: "Hybrid images (low/high frequency mix)",
-          note: "Each row pairs a tiny low-freq view + prompt with the full-size high-freq prompt. TODO fill in exact prompt text.",
+          note: "Each row pairs a tiny low-freq view + prompt with the full-size high-freq prompt.",
           outputs_rows: [
             pairRow([
               {
@@ -1471,7 +1676,7 @@
                   "outputs/part_a/q1/q9/photoblueberrymuffin_photodog.png",
                 ),
                 title: "Low freq ",
-                subtitle: "Low-freq prompt: TODO",
+                subtitle: " a photo of a blueberry muffin",
                 figureClass: ["small-thumb"],
               },
               {
@@ -1479,20 +1684,20 @@
                   "outputs/part_a/q1/q9/photoblueberrymuffin_photodog.png",
                 ),
                 title: "High freq",
-                subtitle: "High-freq prompt: TODO",
+                subtitle: " a photo of a dog",
               },
             ]),
             pairRow([
               {
                 src: P("outputs/part_a/q1/q9/photoface_photowaterfall.png"),
                 title: "Low freq ",
-                subtitle: "Low-freq prompt: TODO",
+                subtitle: " a photo of a face",
                 figureClass: ["small-thumb"],
               },
               {
                 src: P("outputs/part_a/q1/q9/photoface_photowaterfall.png"),
                 title: "High freq",
-                subtitle: "High-freq prompt: TODO",
+                subtitle: " a photo of a waterfall",
               },
             ]),
             pairRow([
@@ -1501,7 +1706,7 @@
                   "outputs/part_a/q1/q9/photoskull_photopolarbear_copy.png",
                 ),
                 title: "Low freq ",
-                subtitle: "Low-freq prompt: TODO",
+                subtitle: " a photo of a skull",
                 figureClass: ["small-thumb"],
               },
               {
@@ -1509,7 +1714,7 @@
                   "outputs/part_a/q1/q9/photoskull_photopolarbear_copy.png",
                 ),
                 title: "High freq",
-                subtitle: "High-freq prompt: TODO",
+                subtitle: " a photo of a polar bear",
               },
             ]),
           ],
@@ -1568,7 +1773,20 @@
           ],
         },
         {
-          label: "Test set denoising (σ=0.5)",
+          label: "Epoch 1 samples (σ=0.5)",
+          note: "TODO capture test digits after 1 epoch (deliverable).",
+          outputs_rows: [
+            [
+              {
+                title: "TODO epoch 1 grid",
+                note: "Add five denoised test digits at σ=0.5 after epoch 1.",
+              },
+            ],
+          ],
+        },
+        {
+          label: "Epoch 5 samples (σ=0.5)",
+          note: "Current outputs assumed to be final/epoch 5; TODO confirm timing.",
           outputs_rows: [
             [
               {
@@ -1727,6 +1945,18 @@
 
       const TIMECOND = [
         {
+          label: "Training curve (time-conditioned UNet)",
+          note: "TODO add loss vs iteration/epoch plot (deliverable).",
+          outputs_rows: [
+            [
+              {
+                title: "TODO loss curve",
+                note: "Plot training loss for the time-conditioned UNet.",
+              },
+            ],
+          ],
+        },
+        {
           label: "Time-conditioned flow matching samples",
           note: "Noise → digit trajectories improve with more epochs.",
           outputs_rows: [
@@ -1812,26 +2042,59 @@
       ];
 
       (function init() {
-        buildGrouped(document.getElementById("spec-grid"), SPEC);
-        buildGrouped(document.getElementById("prompt-grid"), PROMPTS);
+        // buildGrouped(document.getElementById("prompt-grid"), PROMPTS);
         buildGrouped(document.getElementById("forward-grid"), FORWARD);
+        buildGrouped(
+          document.getElementById("forward-spec-grid"),
+          SPEC_FORWARD,
+        );
         buildGrouped(document.getElementById("gaussian-grid"), GAUSSIAN);
         buildGrouped(document.getElementById("onestep-grid"), ONESTEP);
         buildGrouped(document.getElementById("iterative-grid"), ITERATIVE);
+        buildGrouped(
+          document.getElementById("iterative-spec-grid"),
+          SPEC_ITERATIVE,
+        );
         buildGrouped(document.getElementById("sample-grid"), SAMPLING);
         buildGrouped(document.getElementById("cfg-grid"), CFG);
+        buildGrouped(document.getElementById("cfg-spec-grid"), SPEC_CFG);
         buildGrouped(document.getElementById("sdedit-grid"), SDEDIT);
         buildGrouped(document.getElementById("handdrawn-grid"), HANDDRAWN);
         buildGrouped(document.getElementById("inpaint-grid"), INPAINT);
+        buildGrouped(
+          document.getElementById("inpaint-spec-grid"),
+          SPEC_INPAINT,
+        );
         buildGrouped(document.getElementById("textedit-grid"), TEXTEDIT);
         buildGrouped(document.getElementById("illusion-grid"), ILLUSIONS);
+        buildGrouped(
+          document.getElementById("illusion-spec-grid"),
+          SPEC_ILLUSION,
+        );
         buildGrouped(document.getElementById("hybrid-grid"), HYBRIDS);
+        buildGrouped(document.getElementById("hybrid-spec-grid"), SPEC_HYBRID);
         buildGrouped(document.getElementById("noiseproc-grid"), NOISEPROC);
+        buildGrouped(
+          document.getElementById("noising-spec-grid"),
+          SPEC_NOISING,
+        );
         buildGrouped(document.getElementById("denoiser-grid"), DENOISER);
+        buildGrouped(
+          document.getElementById("denoiser-spec-grid"),
+          SPEC_DENOISER,
+        );
         buildGrouped(document.getElementById("ood-grid"), OOD);
         buildGrouped(document.getElementById("purenoise-grid"), PURENOISE);
         buildGrouped(document.getElementById("timecond-grid"), TIMECOND);
+        buildGrouped(
+          document.getElementById("timecond-spec-grid"),
+          SPEC_TIMECOND,
+        );
         buildGrouped(document.getElementById("classcond-grid"), CLASSCOND);
+        buildGrouped(
+          document.getElementById("classcond-spec-grid"),
+          SPEC_CLASSCOND,
+        );
         buildGrouped(document.getElementById("nosched-grid"), NOSCHED);
       })();
     </script>
