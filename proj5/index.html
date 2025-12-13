@@ -1,0 +1,1839 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>CS180 · Project 5</title>
+
+    <!-- Inter (thin) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap"
+      rel="stylesheet"
+    />
+
+    <!-- Keep the exact same stylesheet -->
+    <link rel="stylesheet" href="style.css" />
+
+    <style>
+      :root {
+        --thumb-h: 320px;
+        --mosaic-thumb-h: 500px;
+      }
+
+      .disp-R {
+        color: #e11d48;
+        font-weight: 600;
+      }
+      .disp-B {
+        color: #2563eb;
+        font-weight: 600;
+      }
+      .metrics-note {
+        font-size: 0.95rem;
+        opacity: 0.85;
+        margin-bottom: 1rem;
+      }
+      .kicker {
+        display: none;
+      }
+      .grid {
+        margin-left: auto;
+        margin-right: auto;
+        justify-items: center;
+        align-items: center;
+      }
+      .grid > .row-grid {
+        grid-column: 1 / -1;
+        width: 100%;
+      }
+      .grid figure {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        width: 100%;
+      }
+      .grid img {
+        height: auto;
+        max-height: var(--thumb-h);
+        width: auto;
+        max-width: 100%;
+        object-fit: contain;
+        display: block;
+      }
+      .grid .figure-error {
+        min-height: var(--thumb-h);
+        padding: 1rem;
+        border: 1px dashed #ddd;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        box-sizing: border-box;
+        width: 100%;
+      }
+      .group-block {
+        width: 100%;
+      }
+      .group-block h4 {
+        margin: 0.75rem 0 0.5rem;
+      }
+      .group-block .label {
+        opacity: 0.8;
+        margin: 0.25rem 0 0.5rem;
+        font-size: 0.95rem;
+      }
+      .group-block hr {
+        border: none;
+        border-top: 1px solid #eee;
+        margin: 0.75rem 0;
+      }
+      .row-grid {
+        display: flex;
+        flex-direction: column;
+        gap: 0.9rem;
+        justify-content: center;
+        align-items: center;
+        overflow-x: auto;
+        padding-bottom: 0.25rem;
+      }
+      .row-grid.pair-row {
+        flex-direction: row;
+        align-items: flex-start;
+      }
+      .row-grid figure {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        flex: 1 1 220px;
+        min-width: 0;
+      }
+      .row-grid img {
+        height: auto;
+        max-height: var(--thumb-h);
+        width: auto;
+        max-width: 100%;
+        object-fit: contain;
+        display: block;
+      }
+      .row-grid .figure-error {
+        min-height: var(--thumb-h);
+        padding: 1rem;
+        border: 1px dashed #ddd;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        box-sizing: border-box;
+      }
+      .descriptor-figure {
+        flex: 0 0 200px;
+      }
+      .descriptor-figure img {
+        height: 200px;
+        width: auto;
+      }
+      @media (max-width: 760px) {
+        .descriptor-figure {
+          flex: 1 1 160px;
+        }
+        .descriptor-figure img {
+          height: 160px;
+        }
+      }
+      .matrix-card {
+        width: 100%;
+        overflow-x: auto;
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
+        padding: 0.75rem;
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+      }
+      .matrix-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo,
+          monospace;
+      }
+      .matrix-table td {
+        padding: 0.35rem 0.55rem;
+        border: 1px solid #dbeafe;
+        text-align: right;
+        white-space: nowrap;
+        font-variant-numeric: tabular-nums;
+      }
+      .matrix-note {
+        margin-top: 0.5rem;
+        font-size: 0.9rem;
+        opacity: 0.75;
+      }
+      .eqs {
+        margin: 0.75rem 0 1rem;
+        padding: 0.5rem 0.75rem;
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
+      }
+      .eqs p {
+        margin: 0.25rem 0 0.35rem;
+        opacity: 0.85;
+      }
+      .eqs .eq-cite {
+        font-size: 0.85rem;
+        opacity: 0.7;
+      }
+      .rot-180 img {
+        transform: rotate(180deg);
+      }
+      .small-thumb img {
+        max-height: 30px;
+      }
+    </style>
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="container">
+        <h1 class="title">CS 180 Programming Project #5</h1>
+        <h2 class="sub">Diffusion Models &amp; Flow Matching</h2>
+        <h3 class="due"><span>Anirudh Kotamraju</span></h3>
+      </div>
+    </header>
+
+    <main class="container">
+      <section id="overview" class="section">
+        <h2>Overview</h2>
+        <p>
+          This round shifts from NeRFs to generative diffusion. Part A builds
+          custom sampling loops on DeepFloyd IF: forward noise, one-step and
+          iterative reverse steps, CFG, SDEdit, inpainting, and prompt-to-prompt
+          illusions straight from the spec so each deliverable maps to a concrete
+          loop. Part B mirrors the handout’s training flow: start with a
+          single-step denoiser, add time conditioning for flow matching, then add
+          class conditioning plus classifier-free guidance and a scheduler
+          ablation.
+        </p>
+        <div class="eqs">
+          <p><strong>Algorithm cards</strong></p>
+          <p>Spec snippets for reference (pulled from the handout).</p>
+        </div>
+        <div id="spec-grid" class="grid"></div>
+      </section>
+
+      <section id="partA" class="section">
+        <h2>Part A: DeepFloyd Diffusion Loops</h2>
+        <p>
+          Notebook code mirrors the spec: cache prompt embeddings, seed once,
+          implement forward noise and reverse steps, and keep the stride-based
+          scheduler for iterative sampling. CFG doubles the UNet calls each
+          step, and inpainting/SDEdit reuse the same loop with masks or noisy
+          starts.
+        </p>
+        <div class="eqs">
+          <p><strong>Guidance + sampling</strong></p>
+          <p>
+            TODO add the provided diagrams for forward, reverse, CFG, and
+            SD-Edit.
+          </p>
+        </div>
+
+        <h3>0: Prompts &amp; Seed</h3>
+        <p>
+          Part 0 follows the setup cell in the notebook: load the provided T5
+          cache for prompt embeddings and lock seed 162 for everything (forward
+          noise, CFG, SDEdit, inpainting) so side-by-side grids stay aligned.
+          TODO: list the exact text prompts used for illusions and hybrids.
+        </p>
+        <div id="prompt-grid" class="grid"></div>
+
+        <h3>1.1 Forward Process</h3>
+        <p>
+          Forward noise follows the spec: scale the image by
+          \(\sqrt{\alpha_{\text{cum}}}\) and add Gaussian noise with
+          \(\sqrt{1-\alpha_{\text{cum}}}\) at each chosen timestep. This exactly
+          matches the provided forward() equation; the t=250/500/750 plots show
+          the smooth march toward pure noise.
+        </p>
+        <div id="forward-grid" class="grid"></div>
+
+        <h3>1.2 Classical Gaussian Denoising</h3>
+        <p>
+          As a control experiment from the spec, sweep Gaussian kernel/sigma in
+          torchvision to push the noisy inputs back toward clean. Blurs dampen
+          high-frequency noise but quickly smear edges at higher noise levels,
+          underscoring why learned reverse steps are needed.
+        </p>
+        <div id="gaussian-grid" class="grid"></div>
+
+        <h3>1.3 One-Step Denoising</h3>
+        <p>
+          Run one reverse step exactly as in the handout: pass the noisy image,
+          timestep, and neutral prompt embedding to stage_1.unet, take the first
+          three channels of its output as the noise estimate, and reconstruct
+          with the closed-form update (Eq. A.2). It cleans light noise but
+          falters as t increases.
+        </p>
+        <div id="onestep-grid" class="grid"></div>
+
+        <h3>1.4 Iterative Denoising</h3>
+        <p>
+          Use a strided schedule from 990→0 (step 30). Each step predicts noise,
+          blends signal/noise with the alphas, and reintroduces variance with
+          the helper so the chain stays on the diffusion trajectory. This follows
+          the strided timetable and update in the spec; the final result is
+          noticeably sharper than the one-step or Gaussian baselines.
+        </p>
+        <div id="iterative-grid" class="grid"></div>
+
+        <h3>1.5 Sampling from Noise</h3>
+        <p>
+          Start from pure Gaussian noise at the highest timestep and run the
+          same iterative loop with the neutral prompt. This is pure generation
+          without CFG to keep diversity.
+        </p>
+        <div id="sample-grid" class="grid"></div>
+
+        <h3>1.6 Classifier-Free Guidance</h3>
+        <p>
+          Two UNet passes per step—one with the prompt, one empty—and blend
+          their noise estimates with cfg=7.5. Guidance tightens alignment to the
+          text while sacrificing some variation.
+        </p>
+        <div id="cfg-grid" class="grid"></div>
+
+        <h3>1.7 SDEdit: Image-to-Image</h3>
+        <p>
+          Add controlled noise to an input image, then denoise with the neutral
+          prompt using the iterative loop. Higher starting indices give the
+          model more freedom to alter structure before projecting back.
+        </p>
+        <div id="sdedit-grid" class="grid"></div>
+
+        <h3>1.7.1 Web + Hand-Drawn Edits</h3>
+        <p>
+          Apply the same SDEdit loop to web images and doodles after center
+          cropping/resizing to square. Low noise keeps the original recognizable
+          while higher noise forces the model to hallucinate more detail.
+        </p>
+        <div id="handdrawn-grid" class="grid"></div>
+
+        <h3>1.7.2 Inpainting</h3>
+        <p>
+          At every reverse step, clamp unmasked pixels back to the original
+          image re-noised for the current t and let the model redraw only the
+          masked hole. This keeps surrounding context fixed while filling the
+          gap.
+        </p>
+        <div id="inpaint-grid" class="grid"></div>
+
+        <h3>1.7.3 Text-Conditional Edits</h3>
+        <p>
+          Same SDEdit pipeline but swap in new prompts so the projection is
+          steered toward the text. More initial noise yields more dramatic
+          prompt-driven changes to the original.
+        </p>
+        <div id="textedit-grid" class="grid"></div>
+
+        <h3>1.8 Prompt-to-Prompt Illusions</h3>
+        <p>
+          At each step, denoise both the image and its 180° flip with two
+          different prompts, average their noise predictions, and continue the
+          reverse chain. Upright and flipped views emphasize different prompts.
+        </p>
+        <div id="illusion-grid" class="grid"></div>
+
+        <h3>1.9 Hybrid Images</h3>
+        <p>
+          Split the predicted noise into low-pass and high-pass via Gaussian
+          blur, keep lows from one prompt and highs from another, then combine
+          for the reverse update. Tiny thumbnails hint at the low-frequency read
+          while the full images show the merged hybrid.
+        </p>
+        <div id="hybrid-grid" class="grid"></div>
+      </section>
+
+      <section id="partB" class="section">
+        <h2>Part B: Flow Matching on MNIST</h2>
+        <p>
+          Training follows the notebook: first a light UNet for single-step
+          denoising, then time conditioning for flow matching, and finally class
+          conditioning with classifier-free guidance. Same seed and dataloader
+          setup keep the sample grids comparable across experiments.
+        </p>
+        <div class="eqs">
+          <p><strong>Flow matching + sampling</strong></p>
+          <p>TODO add Algorithm B diagrams for training and sampling.</p>
+        </div>
+
+        <h3>1.1 Noising Process</h3>
+        <p>
+          Each MNIST digit is corrupted with Gaussian noise at a sampled scale
+          so the denoiser sees a range of inputs. Visualizing multiple σ values
+          sets expectations for what the UNet must undo.
+        </p>
+        <div id="noiseproc-grid" class="grid"></div>
+
+        <h3>1.2 Single-Step Denoiser</h3>
+        <p>
+          A shallow UNet trains with MSE on noisy/clean pairs; every batch is
+          re-noised each epoch so the model learns the mapping, not the specific
+          corruption. Loss curves track convergence, and test samples show
+          denoising at σ=0.5.
+        </p>
+        <div id="denoiser-grid" class="grid"></div>
+
+        <h3>1.2.2 Out-of-Distribution Noise</h3>
+        <p>
+          After training on σ=0.5, push the same test digit through other σ
+          levels to gauge how well the single-step model generalizes beyond its
+          training noise.
+        </p>
+        <div id="ood-grid" class="grid"></div>
+
+        <h3>1.2.3 Denoising Pure Noise</h3>
+        <p>
+          Retrain the same UNet to map pure noise toward digits. Early epochs
+          converge toward blurry class means; later epochs sharpen as the model
+          learns a prior over digits without any clean input.
+        </p>
+        <div id="purenoise-grid" class="grid"></div>
+
+        <h3>2.3 Time-Conditioned Flow Matching</h3>
+        <p>
+          Inject normalized time into the UNet via small FC blocks, sample a
+          random t each batch, and train the network to predict the flow
+          back toward clean data. Sampling starts from noise and steps t
+          downward, showing digits emerge over epochs.
+        </p>
+        <div id="timecond-grid" class="grid"></div>
+
+        <h3>2.6 Class-Conditioned Sampling</h3>
+        <p>
+          Add one-hot class conditioning with dropout so classifier-free
+          guidance is possible; sampling uses cfg to bias toward the requested
+          digit. Results improve faster than the time-only model.
+        </p>
+        <div id="classcond-grid" class="grid"></div>
+
+        <h3>Scheduler Ablation</h3>
+        <p>
+          Same class-conditioned setup but remove the LR decay. Curves and grids
+          show how training behaves without the scheduler.
+        </p>
+        <div id="nosched-grid" class="grid"></div>
+      </section>
+
+      <section id="reflection" class="section">
+        <h2>Reflection</h2>
+        <p>
+          Diffusion felt more forgiving than NeRFs: after wiring stride,
+          variance, and CFG correctly, swapping prompts or masks produced stable
+          outputs. Inpainting and SDEdit were the most satisfying because the
+          same reverse loop could handle edits with minimal code change. Flow
+          matching on MNIST is tiny by comparison, but conditioning on time and
+          class made the guidance math concrete and visibly sped convergence.
+          TODO: add any final notes after longer runs.
+        </p>
+      </section>
+    </main>
+
+    <script>
+      const P = (basename) => "public/" + basename;
+
+      const formatMatrixValue = (raw) => {
+        const num = typeof raw === "number" ? raw : Number(raw);
+        if (!Number.isFinite(num)) {
+          return raw;
+        }
+        const abs = Math.abs(num);
+        if (abs !== 0 && (abs < 1e-3 || abs >= 1e3)) {
+          return num.toExponential(3);
+        }
+        const fixed = num.toFixed(4);
+        return fixed === "-0.0000" ? "0.0000" : fixed;
+      };
+
+      function renderMatrixTable(matrix) {
+        const table = document.createElement("table");
+        table.className = "matrix-table";
+        const tbody = document.createElement("tbody");
+        table.appendChild(tbody);
+        for (const row of matrix) {
+          const tr = document.createElement("tr");
+          for (const value of row) {
+            const td = document.createElement("td");
+            td.textContent = formatMatrixValue(value);
+            tr.appendChild(td);
+          }
+          tbody.appendChild(tr);
+        }
+        return table;
+      }
+
+      function createFigure(itemOrSrc, title, subtitle = "") {
+        const item =
+          typeof itemOrSrc === "object" && itemOrSrc !== null
+            ? itemOrSrc
+            : { src: itemOrSrc, title, subtitle };
+
+        const fig = document.createElement("figure");
+        if (item.figureClass) {
+          if (Array.isArray(item.figureClass)) {
+            fig.classList.add(...item.figureClass);
+          } else {
+            fig.classList.add(item.figureClass);
+          }
+        }
+        const heading = item.title || "";
+        const detail = item.subtitle || "";
+
+        const cap = document.createElement("figcaption");
+        cap.innerHTML =
+          "<strong>" + heading + "</strong>" + (detail ? "<br/>" + detail : "");
+
+        if (Array.isArray(item.matrix)) {
+          const card = document.createElement("div");
+          card.className = "matrix-card";
+          card.appendChild(renderMatrixTable(item.matrix));
+          if (item.matrixNote) {
+            const note = document.createElement("div");
+            note.className = "matrix-note";
+            note.textContent = item.matrixNote;
+            card.appendChild(note);
+          }
+          fig.appendChild(card);
+          fig.appendChild(cap);
+          return fig;
+        }
+
+        if (item.src) {
+          const img = document.createElement("img");
+          img.loading = "lazy";
+          img.alt = heading || item.src;
+          img.src = item.src;
+
+          img.onerror = () => {
+            const stub = document.createElement("div");
+            stub.className = "figure-error";
+            stub.innerHTML =
+              "<strong>Preview unavailable:</strong> <code>" +
+              item.src.replace(/</g, "&lt;").replace(/>/g, "&gt;") +
+              "</code>";
+            fig.replaceChildren(stub, cap);
+          };
+
+          fig.appendChild(img);
+          fig.appendChild(cap);
+          return fig;
+        }
+
+        const stub = document.createElement("div");
+        stub.className = "figure-error";
+        stub.innerHTML =
+          "<strong>Nothing to display.</strong>" +
+          (item.note ? "<br/>" + item.note : "");
+        fig.appendChild(stub);
+        fig.appendChild(cap);
+        return fig;
+      }
+
+      function buildRowAwareGrid(containerEl, itemsOrRows) {
+        const isRow = (x) => Array.isArray(x);
+        for (const entry of itemsOrRows) {
+          if (isRow(entry)) {
+            const row = document.createElement("div");
+            row.className = "row-grid";
+            if (entry._pair) {
+              row.classList.add("pair-row");
+            }
+            for (const it of entry) {
+              row.appendChild(createFigure(it));
+            }
+            containerEl.appendChild(row);
+          } else {
+            containerEl.appendChild(createFigure(entry));
+          }
+        }
+      }
+
+      function buildGrouped(gridEl, groups) {
+        for (const g of groups) {
+          const block = document.createElement("div");
+          block.className = "group-block";
+          block.style.gridColumn = "1 / -1";
+
+          if (g.label) {
+            const h = document.createElement("h4");
+            h.textContent = g.label;
+            block.appendChild(h);
+          }
+          if (g.note) {
+            const n = document.createElement("div");
+            n.className = "label";
+            n.textContent = g.note;
+            block.appendChild(n);
+          }
+
+          const inputsData = g.inputs_rows || g.inputs || [];
+          if (inputsData.length) {
+            const inLabel = document.createElement("div");
+            inLabel.className = "label";
+            inLabel.textContent = "Inputs";
+            block.appendChild(inLabel);
+
+            const inWrap = document.createElement("div");
+            inWrap.className = "grid";
+            if (g.inputsThumb) {
+              inWrap.style.setProperty("--thumb-h", g.inputsThumb);
+            }
+            buildRowAwareGrid(inWrap, inputsData);
+            block.appendChild(inWrap);
+          }
+
+          const outputsData = g.outputs_rows || g.outputs || [];
+          if (outputsData.length) {
+            const hr = document.createElement("hr");
+            block.appendChild(hr);
+
+            const outLabel = document.createElement("div");
+            outLabel.className = "label";
+            outLabel.textContent = "Outputs";
+            block.appendChild(outLabel);
+
+            const outWrap = document.createElement("div");
+            outWrap.className = "grid";
+            if (g.outputsThumb) {
+              outWrap.style.setProperty("--thumb-h", g.outputsThumb);
+            }
+            buildRowAwareGrid(outWrap, outputsData);
+            block.appendChild(outWrap);
+          }
+
+          gridEl.appendChild(block);
+        }
+      }
+
+      const pairRow = (items) => {
+        items._pair = true;
+        return items;
+      };
+
+      const PROMPTS = [
+        {
+          label: "Prompts and seed",
+          outputs: [
+            [
+              {
+                matrix: [
+                  ["Seed", "162"],
+                ],
+                matrixNote: "",
+              },
+            ],
+          ],
+        },
+      ];
+
+      const SPEC = [
+        {
+          label: "Spec snippets (Part B)",
+          note: "UNet and tensor ops from the handout.",
+          outputs_rows: [
+            [
+              { src: P("outputs/part_b/q1/spec_unet_Figure1.png"), title: "UNet (Figure 1)" },
+              { src: P("outputs/part_b/q1/spec_tensorops_Figure2.png"), title: "Tensor ops (Figure 2)" },
+            ],
+          ],
+        },
+        {
+          label: "Spec formulas (flow matching)",
+          outputs_rows: [
+            [
+              { src: P("outputs/part_b/q2/spec_interpolation_B3.png"), title: "Interpolation (Eq. B3)" },
+              { src: P("outputs/part_b/q2/spec_velocity_formula_B4.png"), title: "Velocity (Eq. B4)" },
+              { src: P("outputs/part_b/q2/spec_learning_objective_B5.png"), title: "Objective (Eq. B5)" },
+            ],
+          ],
+        },
+        {
+          label: "Spec algorithms",
+          outputs_rows: [
+            [
+              { src: P("outputs/part_b/q2/spec_algorithm_B1.png"), title: "Algorithm B.1 (training)" },
+              { src: P("outputs/part_b/q1/spec_loss_formula_B1.png"), title: "Loss (single-step denoiser)" },
+            ],
+          ],
+        },
+      ];
+
+      const FORWARD = [
+        {
+          label: "Campanile forward noising",
+          note: "q=250/500/750 with the provided alphas_cumprod schedule.",
+          inputs_rows: [
+            [
+              {
+                src: P("outputs/part_a/q1/q3/original.png"),
+                title: "Original",
+              },
+            ],
+          ],
+          outputs_rows: [
+            [
+              { src: P("outputs/part_a/q1/q1/250.png"), title: "t=250" },
+              { src: P("outputs/part_a/q1/q1/500.png"), title: "t=500" },
+              { src: P("outputs/part_a/q1/q1/750.png"), title: "t=750" },
+            ],
+          ],
+        },
+      ];
+
+      const GAUSSIAN = [
+        {
+          label: "Gaussian blur baselines",
+          note: "Torchvision Gaussian blur tuned per timestep.",
+          outputs_rows: [
+            [
+              { src: P("outputs/part_a/q1/q2/250.png"), title: "t=250" },
+              { src: P("outputs/part_a/q1/q2/500.png"), title: "t=500" },
+              { src: P("outputs/part_a/q1/q2/750.png"), title: "t=750" },
+            ],
+          ],
+        },
+      ];
+
+      const ONESTEP = [
+        {
+          label: "One-step denoising with stage_1 UNet",
+          note: "Same noisy inputs as above; single reverse step.",
+          inputs_rows: [
+            [
+              {
+                src: P("outputs/part_a/q1/q3/noisy_250.png"),
+                title: "Noisy 250",
+              },
+              {
+                src: P("outputs/part_a/q1/q3/noisy_500.png"),
+                title: "Noisy 500",
+              },
+              {
+                src: P("outputs/part_a/q1/q3/noisy_750.png"),
+                title: "Noisy 750",
+              },
+            ],
+          ],
+          outputs_rows: [
+            [
+              {
+                src: P("outputs/part_a/q1/q3/denoised_250.png"),
+                title: "Denoised 250",
+              },
+              {
+                src: P("outputs/part_a/q1/q3/denoised_500.png"),
+                title: "Denoised 500",
+              },
+              {
+                src: P("outputs/part_a/q1/q3/denoised_750.png"),
+                title: "Denoised 750",
+              },
+            ],
+          ],
+        },
+      ];
+
+      const ITERATIVE = [
+        {
+          label: "Iterative denoising (stride=30, start 990 → 0)",
+          note: "Intermediate frames every few steps; compare to baselines.",
+          inputs_rows: [
+            [
+              {
+                src: P(
+                  "outputs/part_a/q1/q4/iterative_denoised_timestep=990.png",
+                ),
+                title: "t=990",
+              },
+              {
+                src: P(
+                  "outputs/part_a/q1/q4/iterative_denoised_timestep=840.png",
+                ),
+                title: "t=840",
+              },
+              {
+                src: P(
+                  "outputs/part_a/q1/q4/iterative_denoised_timestep=690.png",
+                ),
+                title: "t=690",
+              },
+            ],
+            [
+              {
+                src: P(
+                  "outputs/part_a/q1/q4/iterative_denoised_timestep=540.png",
+                ),
+                title: "t=540",
+              },
+              {
+                src: P(
+                  "outputs/part_a/q1/q4/iterative_denoised_timestep=390.png",
+                ),
+                title: "t=390",
+              },
+              {
+                src: P(
+                  "outputs/part_a/q1/q4/iterative_denoised_timestep=240.png",
+                ),
+                title: "t=240",
+              },
+            ],
+            [
+              {
+                src: P(
+                  "outputs/part_a/q1/q4/iterative_denoised_timestep=90.png",
+                ),
+                title: "t=90",
+              },
+            ],
+          ],
+          outputs_rows: [
+            [
+              {
+                src: P("outputs/part_a/q1/q4/final_denoised_iterative.png"),
+                title: "Iterative result",
+              },
+              {
+                src: P("outputs/part_a/q1/q4/one_step_denoise.png"),
+                title: "One-step baseline",
+              },
+              {
+                src: P("outputs/part_a/q1/q4/gaussian_blur.png"),
+                title: "Gaussian baseline",
+              },
+            ],
+          ],
+        },
+      ];
+
+      const SAMPLING = [
+        {
+          label: "Sampling from pure noise",
+          note: "Iterative denoise with i_start=0 and prompt 'a high quality photo'.",
+          outputs_rows: [
+            pairRow([
+              {
+                src: P("outputs/part_a/q1/q5/sample_0.png"),
+                title: "Sample 0",
+              },
+              {
+                src: P("outputs/part_a/q1/q5/sample_1.png"),
+                title: "Sample 1",
+              },
+              {
+                src: P("outputs/part_a/q1/q5/sample_2.png"),
+                title: "Sample 2",
+              },
+              {
+                src: P("outputs/part_a/q1/q5/sample_3.png"),
+                title: "Sample 3",
+              },
+              {
+                src: P("outputs/part_a/q1/q5/sample_4.png"),
+                title: "Sample 4",
+              },
+            ]),
+          ],
+        },
+      ];
+
+      const CFG = [
+        {
+          label: "Classifier-free guidance (cfg=7.5)",
+          note: "Conditional + unconditional passes; stronger prompt pull.",
+          outputs_rows: [
+            pairRow([
+              {
+                src: P("outputs/part_a/q1/q6/sample_0.png"),
+                title: "Sample 0",
+              },
+              {
+                src: P("outputs/part_a/q1/q6/sample_1.png"),
+                title: "Sample 1",
+              },
+              {
+                src: P("outputs/part_a/q1/q6/sample_2.png"),
+                title: "Sample 2",
+              },
+              {
+                src: P("outputs/part_a/q1/q6/sample_3.png"),
+                title: "Sample 3",
+              },
+              {
+                src: P("outputs/part_a/q1/q6/sample_4.png"),
+                title: "Sample 4",
+              },
+            ]),
+          ],
+        },
+      ];
+
+      const SDEDIT = [
+        {
+          label: "Campanile edits (i_start sweep)",
+          inputs_rows: [
+            [
+              {
+                src: P("outputs/part_a/q1/q7/q0/campanile_clean.png"),
+                title: "Input",
+              },
+            ],
+          ],
+          outputs_rows: [
+            pairRow([
+              {
+                src: P("outputs/part_a/q1/q7/q0/campanile_i_start=1.png"),
+                title: "i_start=1",
+              },
+              {
+                src: P("outputs/part_a/q1/q7/q0/campanile_i_start=3.png"),
+                title: "i_start=3",
+              },
+              {
+                src: P("outputs/part_a/q1/q7/q0/campanile_i_start=5.png"),
+                title: "i_start=5",
+              },
+            ]),
+            pairRow([
+              {
+                src: P("outputs/part_a/q1/q7/q0/campanile_i_start=7.png"),
+                title: "i_start=7",
+              },
+              {
+                src: P("outputs/part_a/q1/q7/q0/campanile_i_start=10.png"),
+                title: "i_start=10",
+              },
+              {
+                src: P("outputs/part_a/q1/q7/q0/campanile_i_start=20.png"),
+                title: "i_start=20",
+              },
+            ]),
+          ],
+        },
+        {
+          label: "Boat edits",
+          inputs_rows: [
+            [
+              {
+                src: P("outputs/part_a/q1/q7/q0/boat_clean.png"),
+                title: "Input",
+              },
+            ],
+          ],
+          outputs_rows: [
+            pairRow([
+              {
+                src: P("outputs/part_a/q1/q7/q0/boat_i_start=1.png"),
+                title: "i_start=1",
+              },
+              {
+                src: P("outputs/part_a/q1/q7/q0/boat_i_start=3.png"),
+                title: "i_start=3",
+              },
+              {
+                src: P("outputs/part_a/q1/q7/q0/boat_i_start=5.png"),
+                title: "i_start=5",
+              },
+            ]),
+            pairRow([
+              {
+                src: P("outputs/part_a/q1/q7/q0/boat_i_start=7.png"),
+                title: "i_start=7",
+              },
+              {
+                src: P("outputs/part_a/q1/q7/q0/boat_i_start=10.png"),
+                title: "i_start=10",
+              },
+              {
+                src: P("outputs/part_a/q1/q7/q0/boat_i_start=20.png"),
+                title: "i_start=20",
+              },
+            ]),
+          ],
+        },
+        {
+          label: "Tree edits",
+          inputs_rows: [
+            [
+              {
+                src: P("outputs/part_a/q1/q7/q0/tree_clean.png"),
+                title: "Input",
+              },
+            ],
+          ],
+          outputs_rows: [
+            pairRow([
+              {
+                src: P("outputs/part_a/q1/q7/q0/tree_i_start=1.png"),
+                title: "i_start=1",
+              },
+              {
+                src: P("outputs/part_a/q1/q7/q0/tree_i_start=3.png"),
+                title: "i_start=3",
+              },
+              {
+                src: P("outputs/part_a/q1/q7/q0/tree_i_start=5.png"),
+                title: "i_start=5",
+              },
+            ]),
+            pairRow([
+              {
+                src: P("outputs/part_a/q1/q7/q0/tree_i_start=7.png"),
+                title: "i_start=7",
+              },
+              {
+                src: P("outputs/part_a/q1/q7/q0/tree_i_start=10.png"),
+                title: "i_start=10",
+              },
+              {
+                src: P("outputs/part_a/q1/q7/q0/tree_i_start=20.png"),
+                title: "i_start=20",
+              },
+            ]),
+          ],
+        },
+      ];
+
+      const HANDDRAWN = [
+        {
+          label: "Web image edits (cow)",
+          inputs_rows: [
+            [
+              {
+                src: P("outputs/part_a/q1/q7/q1/webcow_clean.png"),
+                title: "Input",
+              },
+            ],
+          ],
+          outputs_rows: [
+            pairRow([
+              {
+                src: P("outputs/part_a/q1/q7/q1/webcow_i_start=1.png"),
+                title: "i_start=1",
+              },
+              {
+                src: P("outputs/part_a/q1/q7/q1/webcow_i_start=3.png"),
+                title: "i_start=3",
+              },
+              {
+                src: P("outputs/part_a/q1/q7/q1/webcow_i_start=5.png"),
+                title: "i_start=5",
+              },
+            ]),
+            pairRow([
+              {
+                src: P("outputs/part_a/q1/q7/q1/webcow_i_start=7.png"),
+                title: "i_start=7",
+              },
+              {
+                src: P("outputs/part_a/q1/q7/q1/webcow_i_start=10.png"),
+                title: "i_start=10",
+              },
+              {
+                src: P("outputs/part_a/q1/q7/q1/webcow_i_start=20.png"),
+                title: "i_start=20",
+              },
+            ]),
+          ],
+        },
+        {
+          label: "Avocado sketch edits",
+          inputs_rows: [
+            [
+              {
+                src: P("outputs/part_a/q1/q7/q1/avocado_clean.png"),
+                title: "Input",
+              },
+            ],
+          ],
+          outputs_rows: [
+            pairRow([
+              {
+                src: P("outputs/part_a/q1/q7/q1/avocado_i_start=1.png"),
+                title: "i_start=1",
+              },
+              {
+                src: P("outputs/part_a/q1/q7/q1/avocado_i_start=3.png"),
+                title: "i_start=3",
+              },
+              {
+                src: P("outputs/part_a/q1/q7/q1/avocado_i_start=5.png"),
+                title: "i_start=5",
+              },
+            ]),
+            pairRow([
+              {
+                src: P("outputs/part_a/q1/q7/q1/avocado_i_start=7.png"),
+                title: "i_start=7",
+              },
+              {
+                src: P("outputs/part_a/q1/q7/q1/avocado_i_start=10.png"),
+                title: "i_start=10",
+              },
+              {
+                src: P("outputs/part_a/q1/q7/q1/avocado_i_start=20.png"),
+                title: "i_start=20",
+              },
+            ]),
+          ],
+        },
+        {
+          label: "Hand drawn house (rubik) edits",
+          inputs_rows: [
+            [
+              {
+                src: P("outputs/part_a/q1/q7/q1/rubik_clean.png"),
+                title: "Input",
+              },
+            ],
+          ],
+          outputs_rows: [
+            pairRow([
+              {
+                src: P("outputs/part_a/q1/q7/q1/rubik_i_start=1.png"),
+                title: "i_start=1",
+              },
+              {
+                src: P("outputs/part_a/q1/q7/q1/rubik_i_start=3.png"),
+                title: "i_start=3",
+              },
+              {
+                src: P("outputs/part_a/q1/q7/q1/rubik_i_start=5.png"),
+                title: "i_start=5",
+              },
+            ]),
+            pairRow([
+              {
+                src: P("outputs/part_a/q1/q7/q1/rubik_i_start=7.png"),
+                title: "i_start=7",
+              },
+              {
+                src: P("outputs/part_a/q1/q7/q1/rubik_i_start=10.png"),
+                title: "i_start=10",
+              },
+              {
+                src: P("outputs/part_a/q1/q7/q1/rubik_i_start=20.png"),
+                title: "i_start=20",
+              },
+            ]),
+          ],
+        },
+        {
+          label: "Character doodle edits",
+          inputs_rows: [
+            [
+              {
+                src: P("outputs/part_a/q1/q7/q1/waltuh_clean.png"),
+                title: "Input",
+              },
+            ],
+          ],
+          outputs_rows: [
+            pairRow([
+              {
+                src: P("outputs/part_a/q1/q7/q1/waltuh_i_start=1.png"),
+                title: "i_start=1",
+              },
+              {
+                src: P("outputs/part_a/q1/q7/q1/waltuh_i_start=3.png"),
+                title: "i_start=3",
+              },
+              {
+                src: P("outputs/part_a/q1/q7/q1/waltuh_i_start=5.png"),
+                title: "i_start=5",
+              },
+            ]),
+            pairRow([
+              {
+                src: P("outputs/part_a/q1/q7/q1/waltuh_i_start=7.png"),
+                title: "i_start=7",
+              },
+              {
+                src: P("outputs/part_a/q1/q7/q1/waltuh_i_start=10.png"),
+                title: "i_start=10",
+              },
+              {
+                src: P("outputs/part_a/q1/q7/q1/waltuh_i_start=20.png"),
+                title: "i_start=20",
+              },
+            ]),
+          ],
+        },
+      ];
+
+      const INPAINT = [
+        {
+          label: "Campanile inpainting",
+          inputs_rows: [
+            [
+              {
+                src: P("outputs/part_a/q1/q7/q2/campanile_clean.png"),
+                title: "Input",
+              },
+              {
+                src: P("outputs/part_a/q1/q7/q2/campanile_mask.png"),
+                title: "Mask",
+              },
+            ],
+          ],
+          outputs_rows: [
+            [
+              {
+                src: P("outputs/part_a/q1/q7/q2/campanile_inpainted.png"),
+                title: "Inpainted",
+              },
+            ],
+          ],
+        },
+        {
+          label: "Pismo inpainting",
+          inputs_rows: [
+            [
+              {
+                src: P("outputs/part_a/q1/q7/q2/pismo_clean.png"),
+                title: "Input",
+              },
+              {
+                src: P("outputs/part_a/q1/q7/q2/pismo_mask.png"),
+                title: "Mask",
+              },
+            ],
+          ],
+          outputs_rows: [
+            [
+              {
+                src: P("outputs/part_a/q1/q7/q2/pismo_inpainted.png"),
+                title: "Inpainted",
+              },
+            ],
+          ],
+        },
+        {
+          label: "Tree inpainting",
+          inputs_rows: [
+            [
+              {
+                src: P("outputs/part_a/q1/q7/q2/tree_clean.png"),
+                title: "Input",
+              },
+              {
+                src: P("outputs/part_a/q1/q7/q2/tree_mask.png"),
+                title: "Mask",
+              },
+            ],
+          ],
+          outputs_rows: [
+            [
+              {
+                src: P("outputs/part_a/q1/q7/q2/tree_inpainted.png"),
+                title: "Inpainted",
+              },
+            ],
+          ],
+        },
+      ];
+
+      const TEXTEDIT = [
+        {
+          label: "Campanile → rocket ship (text guided)",
+          inputs_rows: [
+            [
+              {
+                src: P(
+                  "outputs/part_a/q1/q7/q3/campanile_rocketship_clean.png",
+                ),
+                title: "Input",
+              },
+            ],
+          ],
+          outputs_rows: [
+            pairRow([
+              {
+                src: P(
+                  "outputs/part_a/q1/q7/q3/campanile_rocketship_i_start=1.png",
+                ),
+                title: "i_start=1",
+              },
+              {
+                src: P(
+                  "outputs/part_a/q1/q7/q3/campanile_rocketship_i_start=3.png",
+                ),
+                title: "i_start=3",
+              },
+              {
+                src: P(
+                  "outputs/part_a/q1/q7/q3/campanile_rocketship_i_start=5.png",
+                ),
+                title: "i_start=5",
+              },
+            ]),
+            pairRow([
+              {
+                src: P(
+                  "outputs/part_a/q1/q7/q3/campanile_rocketship_i_start=7.png",
+                ),
+                title: "i_start=7",
+              },
+              {
+                src: P(
+                  "outputs/part_a/q1/q7/q3/campanile_rocketship_i_start=10.png",
+                ),
+                title: "i_start=10",
+              },
+              {
+                src: P(
+                  "outputs/part_a/q1/q7/q3/campanile_rocketship_i_start=20.png",
+                ),
+                title: "i_start=20",
+              },
+            ]),
+          ],
+        },
+        {
+          label: "Boat → snowy village",
+          inputs_rows: [
+            [
+              {
+                src: P("outputs/part_a/q1/q7/q3/boat_clean.png"),
+                title: "Input",
+              },
+            ],
+          ],
+          outputs_rows: [
+            pairRow([
+              {
+                src: P(
+                  "outputs/part_a/q1/q7/q3/boat_snowyvillage_i_start=1.png",
+                ),
+                title: "i_start=1",
+              },
+              {
+                src: P(
+                  "outputs/part_a/q1/q7/q3/boat_snowyvillage_i_start=3.png",
+                ),
+                title: "i_start=3",
+              },
+              {
+                src: P(
+                  "outputs/part_a/q1/q7/q3/boat_snowyvillage_i_start=5.png",
+                ),
+                title: "i_start=5",
+              },
+            ]),
+            pairRow([
+              {
+                src: P(
+                  "outputs/part_a/q1/q7/q3/boat_snowyvillage_i_start=7.png",
+                ),
+                title: "i_start=7",
+              },
+              {
+                src: P(
+                  "outputs/part_a/q1/q7/q3/boat_snowyvillage_i_start=10.png",
+                ),
+                title: "i_start=10",
+              },
+              {
+                src: P(
+                  "outputs/part_a/q1/q7/q3/boat_snowyvillage_i_start=20.png",
+                ),
+                title: "i_start=20",
+              },
+            ]),
+          ],
+        },
+        {
+          label: "Tree → car in mountains",
+          inputs_rows: [
+            [
+              {
+                src: P(
+                  "outputs/part_a/q1/q7/q3/tree_cardrivingthroughmountains_clean.png",
+                ),
+                title: "Input",
+              },
+            ],
+          ],
+          outputs_rows: [
+            pairRow([
+              {
+                src: P(
+                  "outputs/part_a/q1/q7/q3/tree_cardrivingthroughmountains_i_start=1.png",
+                ),
+                title: "i_start=1",
+              },
+              {
+                src: P(
+                  "outputs/part_a/q1/q7/q3/tree_cardrivingthroughmountains_i_start=3.png",
+                ),
+                title: "i_start=3",
+              },
+              {
+                src: P(
+                  "outputs/part_a/q1/q7/q3/tree_cardrivingthroughmountains_i_start=5.png",
+                ),
+                title: "i_start=5",
+              },
+            ]),
+            pairRow([
+              {
+                src: P(
+                  "outputs/part_a/q1/q7/q3/tree_cardrivingthroughmountains_i_start=7.png",
+                ),
+                title: "i_start=7",
+              },
+              {
+                src: P(
+                  "outputs/part_a/q1/q7/q3/tree_cardrivingthroughmountains_i_start=10.png",
+                ),
+                title: "i_start=10",
+              },
+              {
+                src: P(
+                  "outputs/part_a/q1/q7/q3/tree_cardrivingthroughmountains_i_start=20.png",
+                ),
+                title: "i_start=20",
+              },
+            ]),
+          ],
+        },
+      ];
+
+      const ILLUSIONS = [
+        {
+          label: "Prompt-to-prompt illusions",
+          note: "Each pair shows the render and the upside-down view. TODO fill in exact prompts used.",
+          outputs_rows: [
+            pairRow([
+              {
+                src: P("outputs/part_a/q1/q8/redshirt_beautifulsunset.png"),
+                title: "Illusion 1",
+                subtitle: "Prompt: TODO",
+              },
+              {
+                src: P("outputs/part_a/q1/q8/redshirt_beautifulsunset.png"),
+                title: "Flipped",
+                subtitle: "Prompt: TODO",
+                figureClass: ["rot-180"],
+              },
+            ]),
+            pairRow([
+              {
+                src: P("outputs/part_a/q1/q8/man_fire.png"),
+                title: "Illusion 2",
+                subtitle: "Prompt: TODO",
+              },
+              {
+                src: P("outputs/part_a/q1/q8/man_fire.png"),
+                title: "Flipped",
+                subtitle: "Prompt: TODO",
+                figureClass: ["rot-180"],
+              },
+            ]),
+            pairRow([
+              {
+                src: P("outputs/part_a/q1/q8/snowyvillage_plane.png"),
+                title: "Illusion 3",
+                subtitle: "Prompt: TODO",
+              },
+              {
+                src: P("outputs/part_a/q1/q8/snowyvillage_plane.png"),
+                title: "Flipped",
+                subtitle: "Prompt: TODO",
+                figureClass: ["rot-180"],
+              },
+            ]),
+          ],
+        },
+      ];
+
+      const HYBRIDS = [
+        {
+          label: "Hybrid images (low/high frequency mix)",
+          note: "Each row pairs a tiny low-freq view + prompt with the full-size high-freq prompt. TODO fill in exact prompt text.",
+          outputs_rows: [
+            pairRow([
+              {
+                src: P(
+                  "outputs/part_a/q1/q9/photoblueberrymuffin_photodog.png",
+                ),
+                title: "Low freq ",
+                subtitle: "Low-freq prompt: TODO",
+                figureClass: ["small-thumb"],
+              },
+              {
+                src: P(
+                  "outputs/part_a/q1/q9/photoblueberrymuffin_photodog.png",
+                ),
+                title: "High freq",
+                subtitle: "High-freq prompt: TODO",
+              },
+            ]),
+            pairRow([
+              {
+                src: P("outputs/part_a/q1/q9/photoface_photowaterfall.png"),
+                title: "Low freq ",
+                subtitle: "Low-freq prompt: TODO",
+                figureClass: ["small-thumb"],
+              },
+              {
+                src: P("outputs/part_a/q1/q9/photoface_photowaterfall.png"),
+                title: "High freq",
+                subtitle: "High-freq prompt: TODO",
+              },
+            ]),
+            pairRow([
+              {
+                src: P(
+                  "outputs/part_a/q1/q9/photoskull_photopolarbear_copy.png",
+                ),
+                title: "Low freq ",
+                subtitle: "Low-freq prompt: TODO",
+                figureClass: ["small-thumb"],
+              },
+              {
+                src: P(
+                  "outputs/part_a/q1/q9/photoskull_photopolarbear_copy.png",
+                ),
+                title: "High freq",
+                subtitle: "High-freq prompt: TODO",
+              },
+            ]),
+          ],
+        },
+      ];
+
+      const NOISEPROC = [
+        {
+          label: "Noise sweep",
+          note: "Forward corruption of MNIST digits at different noise scales.",
+          outputs_rows: [
+            [
+              {
+                src: P("outputs/part_b/q1/q2/q0/noise_scale_0.png"),
+                title: "σ=0.0",
+              },
+              {
+                src: P("outputs/part_b/q1/q2/q0/noise_scale_0.2.png"),
+                title: "σ=0.2",
+              },
+              {
+                src: P("outputs/part_b/q1/q2/q0/noise_scale_0.4.png"),
+                title: "σ=0.4",
+              },
+              {
+                src: P("outputs/part_b/q1/q2/q0/noise_scale_0.5.png"),
+                title: "σ=0.5",
+              },
+              {
+                src: P("outputs/part_b/q1/q2/q0/noise_scale_0.6.png"),
+                title: "σ=0.6",
+              },
+              {
+                src: P("outputs/part_b/q1/q2/q0/noise_scale_0.8.png"),
+                title: "σ=0.8",
+              },
+              {
+                src: P("outputs/part_b/q1/q2/q0/noise_scale_1.0.png"),
+                title: "σ=1.0",
+              },
+            ],
+          ],
+        },
+      ];
+
+      const DENOISER = [
+        {
+          label: "Training curve (single-step UNet)",
+          outputs_rows: [
+            [
+              {
+                src: P("outputs/part_b/q1/q2/q1/training_curve.png"),
+                title: "Train loss",
+              },
+            ],
+          ],
+        },
+        {
+          label: "Test set denoising (σ=0.5)",
+          outputs_rows: [
+            [
+              {
+                src: P("outputs/part_b/q1/q2/q1/testimage_noise0.5_0.png"),
+                title: "Sample 0",
+              },
+              {
+                src: P("outputs/part_b/q1/q2/q1/testimage_noise0.5_1.png"),
+                title: "Sample 1",
+              },
+              {
+                src: P("outputs/part_b/q1/q2/q1/testimage_noise0.5_2.png"),
+                title: "Sample 2",
+              },
+              {
+                src: P("outputs/part_b/q1/q2/q1/testimage_noise0.5_3.png"),
+                title: "Sample 3",
+              },
+              {
+                src: P("outputs/part_b/q1/q2/q1/testimage_noise0.5_4.png"),
+                title: "Sample 4",
+              },
+            ],
+          ],
+        },
+      ];
+
+      const OOD = [
+        {
+          label: "Out-of-distribution noise levels",
+          note: "Same test digit with different σ after training on σ=0.5.",
+          outputs_rows: [
+            [
+              {
+                src: P("outputs/part_b/q1/q2/q2/ood_test_image_0.0.png"),
+                title: "σ=0.0",
+              },
+              {
+                src: P("outputs/part_b/q1/q2/q2/ood_test_image_0.2.png"),
+                title: "σ=0.2",
+              },
+              {
+                src: P("outputs/part_b/q1/q2/q2/ood_test_image_0.4.png"),
+                title: "σ=0.4",
+              },
+              {
+                src: P("outputs/part_b/q1/q2/q2/ood_test_image_0.5.png"),
+                title: "σ=0.5",
+              },
+            ],
+            [
+              {
+                src: P("outputs/part_b/q1/q2/q2/ood_test_image_0.6.png"),
+                title: "σ=0.6",
+              },
+              {
+                src: P("outputs/part_b/q1/q2/q2/ood_test_image_0.8.png"),
+                title: "σ=0.8",
+              },
+              {
+                src: P("outputs/part_b/q1/q2/q2/ood_test_image_1.0.png"),
+                title: "σ=1.0",
+              },
+            ],
+          ],
+        },
+      ];
+
+      const PURENOISE = [
+        {
+          label: "Pure noise denoiser training",
+          outputs_rows: [
+            [
+              {
+                src: P("outputs/part_b/q1/q2/q3/training_curve.png"),
+                title: "Train loss",
+              },
+            ],
+          ],
+        },
+        {
+          label: "Epoch 1 outputs",
+          outputs_rows: [
+            [
+              {
+                src: P(
+                  "outputs/part_b/q1/q2/q3/epoch1_denoised_pure_noise_sample0.png",
+                ),
+                title: "Sample 0",
+              },
+              {
+                src: P(
+                  "outputs/part_b/q1/q2/q3/epoch1_denoised_pure_noise_sample1.png",
+                ),
+                title: "Sample 1",
+              },
+              {
+                src: P(
+                  "outputs/part_b/q1/q2/q3/epoch1_denoised_pure_noise_sample2.png",
+                ),
+                title: "Sample 2",
+              },
+              {
+                src: P(
+                  "outputs/part_b/q1/q2/q3/epoch1_denoised_pure_noise_sample3.png",
+                ),
+                title: "Sample 3",
+              },
+              {
+                src: P(
+                  "outputs/part_b/q1/q2/q3/epoch1_denoised_pure_noise_sample4.png",
+                ),
+                title: "Sample 4",
+              },
+            ],
+          ],
+        },
+        {
+          label: "Epoch 5 outputs",
+          outputs_rows: [
+            [
+              {
+                src: P(
+                  "outputs/part_b/q1/q2/q3/epoch5_denoised_pure_noise_sample0.png",
+                ),
+                title: "Sample 0",
+              },
+              {
+                src: P(
+                  "outputs/part_b/q1/q2/q3/epoch5_denoised_pure_noise_sample1.png",
+                ),
+                title: "Sample 1",
+              },
+              {
+                src: P(
+                  "outputs/part_b/q1/q2/q3/epoch5_denoised_pure_noise_sample2.png",
+                ),
+                title: "Sample 2",
+              },
+              {
+                src: P(
+                  "outputs/part_b/q1/q2/q3/epoch5_denoised_pure_noise_sample3.png",
+                ),
+                title: "Sample 3",
+              },
+              {
+                src: P(
+                  "outputs/part_b/q1/q2/q3/epoch5_denoised_pure_noise_sample4.png",
+                ),
+                title: "Sample 4",
+              },
+            ],
+          ],
+        },
+      ];
+
+      const TIMECOND = [
+        {
+          label: "Time-conditioned flow matching samples",
+          note: "Noise → digit trajectories improve with more epochs.",
+          outputs_rows: [
+            [
+              {
+                src: P("outputs/part_b/q2/q3/sample_grid_epoch_1.png"),
+                title: "Epoch 1",
+              },
+              {
+                src: P("outputs/part_b/q2/q3/sample_grid_epoch_5.png"),
+                title: "Epoch 5",
+              },
+              {
+                src: P("outputs/part_b/q2/q3/sample_grid_epoch_10.png"),
+                title: "Epoch 10",
+              },
+            ],
+          ],
+        },
+      ];
+
+      const CLASSCOND = [
+        {
+          label: "Class-conditioned UNet (with scheduler)",
+          outputs_rows: [
+            [
+              {
+                src: P("outputs/part_b/q2/q5/training_curve.png"),
+                title: "Training curve",
+              },
+            ],
+            [
+              {
+                src: P("outputs/part_b/q2/q5/sample_grid_epoch_1.png"),
+                title: "Epoch 1",
+              },
+              {
+                src: P("outputs/part_b/q2/q5/sample_grid_epoch_5.png"),
+                title: "Epoch 5",
+              },
+              {
+                src: P("outputs/part_b/q2/q5/sample_grid_epoch_10.png"),
+                title: "Epoch 10",
+              },
+            ],
+          ],
+        },
+      ];
+
+      const NOSCHED = [
+        {
+          label: "No-scheduler ablation (class-conditioned)",
+          note: "Same setup but without exponential LR decay.",
+          outputs_rows: [
+            [
+              {
+                src: P("outputs/part_b/q2/q5-noscheduler/training_curve.png"),
+                title: "Training curve",
+              },
+            ],
+            [
+              {
+                src: P(
+                  "outputs/part_b/q2/q5-noscheduler/sample_grid_epoch_1.png",
+                ),
+                title: "Epoch 1",
+              },
+              {
+                src: P(
+                  "outputs/part_b/q2/q5-noscheduler/sample_grid_epoch_5.png",
+                ),
+                title: "Epoch 5",
+              },
+              {
+                src: P(
+                  "outputs/part_b/q2/q5-noscheduler/sample_grid_epoch_10.png",
+                ),
+                title: "Epoch 10",
+              },
+            ],
+          ],
+        },
+      ];
+
+      (function init() {
+        buildGrouped(document.getElementById("spec-grid"), SPEC);
+        buildGrouped(document.getElementById("prompt-grid"), PROMPTS);
+        buildGrouped(document.getElementById("forward-grid"), FORWARD);
+        buildGrouped(document.getElementById("gaussian-grid"), GAUSSIAN);
+        buildGrouped(document.getElementById("onestep-grid"), ONESTEP);
+        buildGrouped(document.getElementById("iterative-grid"), ITERATIVE);
+        buildGrouped(document.getElementById("sample-grid"), SAMPLING);
+        buildGrouped(document.getElementById("cfg-grid"), CFG);
+        buildGrouped(document.getElementById("sdedit-grid"), SDEDIT);
+        buildGrouped(document.getElementById("handdrawn-grid"), HANDDRAWN);
+        buildGrouped(document.getElementById("inpaint-grid"), INPAINT);
+        buildGrouped(document.getElementById("textedit-grid"), TEXTEDIT);
+        buildGrouped(document.getElementById("illusion-grid"), ILLUSIONS);
+        buildGrouped(document.getElementById("hybrid-grid"), HYBRIDS);
+        buildGrouped(document.getElementById("noiseproc-grid"), NOISEPROC);
+        buildGrouped(document.getElementById("denoiser-grid"), DENOISER);
+        buildGrouped(document.getElementById("ood-grid"), OOD);
+        buildGrouped(document.getElementById("purenoise-grid"), PURENOISE);
+        buildGrouped(document.getElementById("timecond-grid"), TIMECOND);
+        buildGrouped(document.getElementById("classcond-grid"), CLASSCOND);
+        buildGrouped(document.getElementById("nosched-grid"), NOSCHED);
+      })();
+    </script>
+  </body>
+</html>

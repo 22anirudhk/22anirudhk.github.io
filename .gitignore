@@ -9,3 +9,8 @@ my_work
 *.zip
 *.pyc
 *.npz
+*.pth
+*.env
+*.gz
+*-ubyte
+*.txt
