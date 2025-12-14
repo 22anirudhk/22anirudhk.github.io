@@ -960,42 +960,20 @@ up1 = c2 * up1 + t2;
       const GAUSSIAN = [
         {
           label: "Gaussian blur baselines",
-          note: "Torchvision Gaussian blur tuned per timestep.",
-          inputs_rows: [
-            [
-              {
-                src: P("outputs/part_a/q1/q3/original.png"),
-                title: "Original",
-              },
-              {
-                src: P("outputs/part_a/q1/q3/noisy_250.png"),
-                title: "Noisy 250",
-              },
-              {
-                src: P("outputs/part_a/q1/q3/noisy_500.png"),
-                title: "Noisy 500",
-              },
-              {
-                src: P("outputs/part_a/q1/q3/noisy_750.png"),
-                title: "Noisy 750",
-              },
-            ],
-          ],
+          note: "Row pairs: noisy input vs. Gaussian blur at the same timestep.",
           outputs_rows: [
-            [
-              {
-                src: P("outputs/part_a/q1/q2/250.png"),
-                title: "Denoised t=250",
-              },
-              {
-                src: P("outputs/part_a/q1/q2/500.png"),
-                title: "Denoised t=500",
-              },
-              {
-                src: P("outputs/part_a/q1/q2/750.png"),
-                title: "Denoised t=750",
-              },
-            ],
+            pairRow([
+              { src: P("outputs/part_a/q1/q1/250.png"), title: "Noisy t=250" },
+              { src: P("outputs/part_a/q1/q2/250.png"), title: "Gaussian t=250" },
+            ]),
+            pairRow([
+              { src: P("outputs/part_a/q1/q1/500.png"), title: "Noisy t=500" },
+              { src: P("outputs/part_a/q1/q2/500.png"), title: "Gaussian t=500" },
+            ]),
+            pairRow([
+              { src: P("outputs/part_a/q1/q1/750.png"), title: "Noisy t=750" },
+              { src: P("outputs/part_a/q1/q2/750.png"), title: "Gaussian t=750" },
+            ]),
           ],
         },
       ];
@@ -1003,42 +981,23 @@ up1 = c2 * up1 + t2;
       const ONESTEP = [
         {
           label: "One-step denoising with stage_1 UNet",
-          note: "Same noisy inputs as above; single reverse step.",
-          inputs_rows: [
-            [
-              {
-                src: P("outputs/part_a/q1/q3/original.png"),
-                title: "Original",
-              },
-              {
-                src: P("outputs/part_a/q1/q3/noisy_250.png"),
-                title: "Noisy 250",
-              },
-              {
-                src: P("outputs/part_a/q1/q3/noisy_500.png"),
-                title: "Noisy 500",
-              },
-              {
-                src: P("outputs/part_a/q1/q3/noisy_750.png"),
-                title: "Noisy 750",
-              },
-            ],
-          ],
+          note: "Row format: original → noisy → one-step denoised for each t.",
           outputs_rows: [
-            [
-              {
-                src: P("outputs/part_a/q1/q3/denoised_250.png"),
-                title: "Denoised 250",
-              },
-              {
-                src: P("outputs/part_a/q1/q3/denoised_500.png"),
-                title: "Denoised 500",
-              },
-              {
-                src: P("outputs/part_a/q1/q3/denoised_750.png"),
-                title: "Denoised 750",
-              },
-            ],
+            pairRow([
+              { src: P("outputs/part_a/q1/q3/original.png"), title: "Original" },
+              { src: P("outputs/part_a/q1/q3/noisy_250.png"), title: "Noisy t=250" },
+              { src: P("outputs/part_a/q1/q3/denoised_250.png"), title: "Denoised t=250" },
+            ]),
+            pairRow([
+              { src: P("outputs/part_a/q1/q3/original.png"), title: "Original" },
+              { src: P("outputs/part_a/q1/q3/noisy_500.png"), title: "Noisy t=500" },
+              { src: P("outputs/part_a/q1/q3/denoised_500.png"), title: "Denoised t=500" },
+            ]),
+            pairRow([
+              { src: P("outputs/part_a/q1/q3/original.png"), title: "Original" },
+              { src: P("outputs/part_a/q1/q3/noisy_750.png"), title: "Noisy t=750" },
+              { src: P("outputs/part_a/q1/q3/denoised_750.png"), title: "Denoised t=750" },
+            ]),
           ],
         },
       ];
