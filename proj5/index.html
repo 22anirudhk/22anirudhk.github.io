@@ -349,8 +349,9 @@
         <h3>1.7 SDEdit: Image-to-Image</h3>
         <p>
           Add controlled noise to an input image, then denoise with the neutral
-          prompt using the iterative loop. Higher starting indices give the
-          model more freedom to alter structure before projecting back.
+          prompt using the iterative loop. A higher i_start index means less
+          noise was added to the image, so the final denoised image will be more
+          similar to the original image.
         </p>
         <div id="sdedit-grid" class="grid"></div>
 
@@ -459,9 +460,10 @@
 
         <h3>1.2.3 Denoising Pure Noise</h3>
         <p>
-          Retrain the same UNet to map pure noise toward digits. The outputs
-          look like an average of several digits; MSE likely pushes predictions
-          toward the dataset mean when there is no conditioning signal.
+          Retrain the same UNet to map pure noise toward digits. As we expect,
+          the predicted images are not good. The outputs look like an average of
+          several digits; MSE likely pushes predictions toward the dataset mean
+          when there is no conditioning signal.
         </p>
         <div id="purenoise-grid" class="grid"></div>
 
