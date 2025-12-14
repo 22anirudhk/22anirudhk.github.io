@@ -225,7 +225,9 @@
           implement forward noise, and then reverse with either one-step or a
           strided 990→0 schedule (Δt=30). CFG doubles the UNet passes per step
           (conditional + unconditional), while SDEdit and inpainting reuse the
-          same reverse loop with noisy starts or masks to constrain edits.
+          same reverse loop with noisy starts or masks to constrain edits. When
+          no other prompt is stated, the conditional prompt is “a high quality
+          photo” (per spec). Unconditional calls for CFG use the empty prompt.
         </p>
         <div class="eqs">
           <p><strong>Guidance + sampling</strong></p>
@@ -246,6 +248,17 @@
           happy dog, a plane, a house, a red shirt, a laptop, a beach, a
           beautiful sunset, a rainforest, a photo of a cat/tiger/polar
           bear/snowman/waterfall/face/skull/blueberry muffin/dog.
+        </p>
+        <p>
+          Added the part A q0 outputs below: 20 vs 100 num_inference_steps with
+          the shared seed to highlight the quality/diversity tradeoff across
+          prompts.
+        </p>
+        <p>
+          Increasing the number of inference steps too longer, but it generally
+          seems to improve the quality of the generated image (except for the
+          snowy village prompt, which is likely a one off due to the cartoony
+          style).
         </p>
         <div id="prompt-grid" class="grid"></div>
 
@@ -294,7 +307,8 @@
         <p>
           Start from pure Gaussian noise at the highest timestep and run the
           same iterative loop with the neutral prompt. This is pure generation
-          without CFG to keep diversity; the spec calls for five samples.
+          without CFG to keep diversity; the spec calls for five samples. Prompt
+          used: “a high quality photo.”
         </p>
         <div id="sample-grid" class="grid"></div>
 
@@ -304,6 +318,8 @@
           prompt. Mix the noise predictions as noise_guided = noise_cond + cfg *
           (noise_cond − noise_uncond) with cfg=7, then apply the usual reverse
           update. This strengthens prompt adherence while reducing diversity.
+          Conditional prompt: “a high quality photo”; unconditional prompt:
+          empty (per spec).
         </p>
         <div id="cfg-spec-grid" class="grid"></div>
         <div id="cfg-grid" class="grid"></div>
@@ -862,6 +878,63 @@ up1 = c2 * up1 + t2;
         },
       ];
 
+      const PROMPT_OUTPUTS = [
+        {
+          label: "Prompt outputs (num_inference_steps sweep)",
+          note: "Seed 162. Left: 20 steps. Right: 100 steps.",
+          outputs_rows: [
+            pairRow([
+              {
+                src: P(
+                  "outputs/part_a/q0/20_inference_steps_prompt_a car driving through the mountains.png",
+                ),
+                title: "20 steps",
+                subtitle: "a car driving through the mountains",
+              },
+              {
+                src: P(
+                  "outputs/part_a/q0/100_inference_steps_prompt_a car driving through the mountains.png",
+                ),
+                title: "100 steps",
+                subtitle: "a car driving through the mountains",
+              },
+            ]),
+            pairRow([
+              {
+                src: P(
+                  "outputs/part_a/q0/20_inference_steps_prompt_a snowy village.png",
+                ),
+                title: "20 steps",
+                subtitle: "a snowy village",
+              },
+              {
+                src: P(
+                  "outputs/part_a/q0/100_inference_steps_prompt_a snowy village.png",
+                ),
+                title: "100 steps",
+                subtitle: "a snowy village",
+              },
+            ]),
+            pairRow([
+              {
+                src: P(
+                  "outputs/part_a/q0/20_inference_steps_prompt_a happy dog.png",
+                ),
+                title: "20 steps",
+                subtitle: "a happy dog",
+              },
+              {
+                src: P(
+                  "outputs/part_a/q0/100_inference_steps_prompt_a happy dog.png",
+                ),
+                title: "100 steps",
+                subtitle: "a happy dog",
+              },
+            ]),
+          ],
+        },
+      ];
+
       const FORWARD = [
         {
           label: "Campanile forward noising",
@@ -888,11 +961,40 @@ up1 = c2 * up1 + t2;
         {
           label: "Gaussian blur baselines",
           note: "Torchvision Gaussian blur tuned per timestep.",
+          inputs_rows: [
+            [
+              {
+                src: P("outputs/part_a/q1/q3/original.png"),
+                title: "Original",
+              },
+              {
+                src: P("outputs/part_a/q1/q3/noisy_250.png"),
+                title: "Noisy 250",
+              },
+              {
+                src: P("outputs/part_a/q1/q3/noisy_500.png"),
+                title: "Noisy 500",
+              },
+              {
+                src: P("outputs/part_a/q1/q3/noisy_750.png"),
+                title: "Noisy 750",
+              },
+            ],
+          ],
           outputs_rows: [
             [
-              { src: P("outputs/part_a/q1/q2/250.png"), title: "t=250" },
-              { src: P("outputs/part_a/q1/q2/500.png"), title: "t=500" },
-              { src: P("outputs/part_a/q1/q2/750.png"), title: "t=750" },
+              {
+                src: P("outputs/part_a/q1/q2/250.png"),
+                title: "Denoised t=250",
+              },
+              {
+                src: P("outputs/part_a/q1/q2/500.png"),
+                title: "Denoised t=500",
+              },
+              {
+                src: P("outputs/part_a/q1/q2/750.png"),
+                title: "Denoised t=750",
+              },
             ],
           ],
         },
@@ -904,6 +1006,10 @@ up1 = c2 * up1 + t2;
           note: "Same noisy inputs as above; single reverse step.",
           inputs_rows: [
             [
+              {
+                src: P("outputs/part_a/q1/q3/original.png"),
+                title: "Original",
+              },
               {
                 src: P("outputs/part_a/q1/q3/noisy_250.png"),
                 title: "Noisy 250",
@@ -1043,8 +1149,8 @@ up1 = c2 * up1 + t2;
 
       const CFG = [
         {
-          label: "Classifier-free guidance (cfg=7)",
-          note: "Conditional + unconditional passes; stronger prompt pull.",
+          label: "Classifier-free guidance",
+          note: "Conditional prompt: “a high quality photo”; unconditional prompt: empty. Conditional + unconditional passes; stronger prompt pull.",
           outputs_rows: [
             pairRow([
               {
@@ -2064,7 +2170,7 @@ up1 = c2 * up1 + t2;
       ];
 
       (function init() {
-        // buildGrouped(document.getElementById("prompt-grid"), PROMPTS);
+        buildGrouped(document.getElementById("prompt-grid"), PROMPT_OUTPUTS);
         buildGrouped(document.getElementById("forward-grid"), FORWARD);
         buildGrouped(
           document.getElementById("forward-spec-grid"),
