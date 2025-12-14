@@ -437,7 +437,9 @@
         <div id="noising-spec-grid" class="grid"></div>
         <div id="noiseproc-grid" class="grid"></div>
 
-        <h3>1.2 Single-Step Denoiser</h3>
+        <h3>1.2 Using the UNet to Train a Denoiser</h3>
+
+        <h4>1.2.1 Training</h4>
         <p>
           A shallow UNet trains with MSE on noisy/clean pairs; every batch is
           re-noised each epoch so the model learns the mapping, not the specific
@@ -450,7 +452,7 @@
         <div id="denoiser-spec-grid" class="grid"></div>
         <div id="denoiser-grid" class="grid"></div>
 
-        <h3>1.2.2 Out-of-Distribution Noise</h3>
+        <h4>1.2.2 Out-of-Distribution Testing</h4>
         <p>
           After training on σ=0.5, push the same test digit through other σ
           levels to gauge how well the single-step model generalizes beyond its
@@ -458,7 +460,7 @@
         </p>
         <div id="ood-grid" class="grid"></div>
 
-        <h3>1.2.3 Denoising Pure Noise</h3>
+        <h4>1.2.3 Denoising Pure Noise</h4>
         <p>
           Retrain the same UNet to map pure noise toward digits. As we expect,
           the predicted images are not good. The outputs look like an average of
@@ -467,15 +469,14 @@
         </p>
         <div id="purenoise-grid" class="grid"></div>
 
-        <h3>2.3 Time-Conditioned Flow Matching</h3>
+        <h3>2.2 Training the UNet</h3>
         <p>
           Inject normalized time into the UNet via small FC blocks, sample a
           random t each batch, and train the network to predict the flow back
           toward clean data. Training loop: pick an image x, draw a t, create
           x_t via linear interpolation with noise, ask the UNet to predict the
-          flow vector, and step optimizer. Sampling starts from noise at t=1 and
-          repeatedly uses the predicted flow to move toward digits as t lowers.
-          Spec architecture/equations/loops are below.
+          flow vector, and step optimizer. Spec architecture/equations/loops are
+          below.
         </p>
         <pre><code>// t normalized to [0, 1]
 fc1_t = FCBlock(...); fc2_t = FCBlock(...);
@@ -486,17 +487,22 @@ up1 = up1 * t2;
 // continue through the UNet heads
 </code></pre>
         <div id="timecond-spec-grid" class="grid"></div>
-        <div id="timecond-grid" class="grid"></div>
+        <div id="timecond-train-grid" class="grid"></div>
 
-        <h3>2.6 Class-Conditioned Sampling</h3>
+        <h3>2.3 Sampling from the UNet</h3>
+        <p>
+          Sampling starts from noise at t=1 and repeatedly uses the predicted
+          flow to move toward digits as t lowers. Results improve with more
+          epochs.
+        </p>
+        <div id="timecond-sample-grid" class="grid"></div>
+
+        <h3>2.5 Training the UNet</h3>
         <p>
           Add one-hot class conditioning with dropout (10% of the time, class
           conditioning vector was set to 0) so classifier-free guidance is
-          possible; sampling uses cfg to bias toward the requested digit. During
-          training, sometimes drop the class vector to enable CFG. During
-          sampling, run conditional and unconditional passes, blend with a
-          guidance scale, and step the reverse process. Results improve faster
-          than time-only. Spec CFG sampling loop is below. CFG scale=5.0.
+          possible. During training, sometimes drop the class vector to enable
+          CFG. Spec architecture is below.
         </p>
         <pre><code>// t normalized, c one-hot (with 10% drop to zeros)
 fc1_t = FCBlock(...); fc2_t = FCBlock(...);
@@ -505,13 +511,23 @@ t1 = fc1_t(t); c1 = fc1_c(c);
 t2 = fc2_t(t); c2 = fc2_c(c);
 unflatten = c1 * unflatten + t1;
 up1 = c2 * up1 + t2;
-// forward pass continues; for CFG sampling:
-// noise_guided = noise_cond + cfg * (noise_cond - noise_uncond)
+// forward pass continues
 </code></pre>
         <div id="classcond-spec-grid" class="grid"></div>
-        <div id="classcond-grid" class="grid"></div>
+        <div id="classcond-train-grid" class="grid"></div>
 
-        <h3>Scheduler Ablation</h3>
+        <h3>2.6 Sampling from the UNet</h3>
+        <p>
+          During sampling, run conditional and unconditional passes, blend with
+          a guidance scale, and step the reverse process. Results improve faster
+          than time-only. Spec CFG sampling loop is below. CFG scale=5.0.
+        </p>
+        <pre><code>// for CFG sampling:
+// noise_guided = noise_cond + cfg * (noise_cond - noise_uncond)
+</code></pre>
+        <div id="classcond-sample-grid" class="grid"></div>
+
+        <h4>Scheduler Ablation</h4>
         <p>
           Same class-conditioned setup but remove the LR decay. Curves and grids
           show how training behaves without the scheduler. To compensate for the
@@ -890,9 +906,13 @@ up1 = c2 * up1 + t2;
 
       const SPEC_CLASSCOND = [
         {
-          label: "Spec: Class-conditional CFG sampling",
+          label: "Spec: Class-conditional flow matching",
           outputs_rows: [
             [
+              {
+                src: P("outputs/part_b/q2/q5/spec_algorithm_B3.png"),
+                title: "Training loop",
+              },
               {
                 src: P("outputs/part_b/q2/q6/spec_algorithm_B4.png"),
                 title: "CFG sampling",
@@ -2090,7 +2110,7 @@ up1 = c2 * up1 + t2;
         },
       ];
 
-      const TIMECOND = [
+      const TIMECOND_TRAIN = [
         {
           label: "Training curve (time-conditioned UNet)",
           outputs_rows: [
@@ -2103,6 +2123,9 @@ up1 = c2 * up1 + t2;
             ],
           ],
         },
+      ];
+
+      const TIMECOND_SAMPLE = [
         {
           label: "Time-conditioned flow matching samples",
           note: "Noise → digit trajectories improve with more epochs.",
@@ -2125,9 +2148,9 @@ up1 = c2 * up1 + t2;
         },
       ];
 
-      const CLASSCOND = [
+      const CLASSCOND_TRAIN = [
         {
-          label: "Class-conditioned UNet (with scheduler)",
+          label: "Training curve (class-conditioned UNet)",
           outputs_rows: [
             [
               {
@@ -2135,6 +2158,15 @@ up1 = c2 * up1 + t2;
                 title: "Training curve",
               },
             ],
+          ],
+        },
+      ];
+
+      const CLASSCOND_SAMPLE = [
+        {
+          label: "Class-conditioned flow matching samples",
+          note: "Sampling with CFG scale=5.0.",
+          outputs_rows: [
             [
               {
                 src: P("outputs/part_b/q2/q5/sample_grid_epoch_1.png"),
@@ -2232,15 +2264,29 @@ up1 = c2 * up1 + t2;
         );
         buildGrouped(document.getElementById("ood-grid"), OOD);
         buildGrouped(document.getElementById("purenoise-grid"), PURENOISE);
-        buildGrouped(document.getElementById("timecond-grid"), TIMECOND);
         buildGrouped(
           document.getElementById("timecond-spec-grid"),
           SPEC_TIMECOND,
         );
-        buildGrouped(document.getElementById("classcond-grid"), CLASSCOND);
+        buildGrouped(
+          document.getElementById("timecond-train-grid"),
+          TIMECOND_TRAIN,
+        );
+        buildGrouped(
+          document.getElementById("timecond-sample-grid"),
+          TIMECOND_SAMPLE,
+        );
         buildGrouped(
           document.getElementById("classcond-spec-grid"),
           SPEC_CLASSCOND,
+        );
+        buildGrouped(
+          document.getElementById("classcond-train-grid"),
+          CLASSCOND_TRAIN,
+        );
+        buildGrouped(
+          document.getElementById("classcond-sample-grid"),
+          CLASSCOND_SAMPLE,
         );
         buildGrouped(document.getElementById("nosched-grid"), NOSCHED);
       })();
