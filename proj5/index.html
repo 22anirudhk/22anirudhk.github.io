@@ -214,9 +214,7 @@
           strided reverse steps, CFG, SDEdit, inpainting, visual anagrams, and
           hybrids. Part B follows the flow-matching notebook: MNIST single-step
           denoiser, time-conditioned UNet, class conditioning with CFG, and a
-          no-scheduler ablation. Every section below maps to a spec deliverable;
-          TODO tags mark anything I still need to drop in (algorithms, missing
-          grids, prompt captions).
+          no-scheduler ablation.
         </p>
       </section>
 
@@ -404,9 +402,11 @@
         <p>
           A shallow UNet trains with MSE on noisy/clean pairs; every batch is
           re-noised each epoch so the model learns the mapping, not the specific
-          corruption. Loss curves track convergence, and test samples show
-          denoising at σ=0.5 after epoch 1 and epoch 5 (deliverable). Spec
-          UNet/loss references are below.
+          corruption. Training recipe from the spec: MNIST train split, shuffle,
+          batch size 256, apply fresh noise each fetch, UNet D=128, Adam
+          lr=1e-4, 5 epochs, track loss every few iterations. Loss curves track
+          convergence, and test samples show denoising at σ=0.5 after epoch 1
+          and epoch 5 (deliverable). Spec UNet/loss references are below.
         </p>
         <div id="denoiser-spec-grid" class="grid"></div>
         <div id="denoiser-grid" class="grid"></div>
@@ -437,6 +437,14 @@
           repeatedly uses the predicted flow to move toward digits as t lowers.
           Spec architecture/equations/loops are below.
         </p>
+        <pre><code>// t normalized to [0, 1]
+fc1_t = FCBlock(...); fc2_t = FCBlock(...);
+t1 = fc1_t(t); t2 = fc2_t(t);
+// modulate decoder features by time
+unflatten = unflatten * t1;
+up1 = up1 * t2;
+// continue through the UNet heads
+</code></pre>
         <div id="timecond-spec-grid" class="grid"></div>
         <div id="timecond-grid" class="grid"></div>
 
@@ -448,8 +456,18 @@
           training, sometimes drop the class vector to enable CFG. During
           sampling, run conditional and unconditional passes, blend with a
           guidance scale, and step the reverse process. Results improve faster
-          than time-only. Spec CFG sampling loop is below. CFG scale=5 was used.
+          than time-only. Spec CFG sampling loop is below. CFG scale=5.0.
         </p>
+        <pre><code>// t normalized, c one-hot (with 10% drop to zeros)
+fc1_t = FCBlock(...); fc2_t = FCBlock(...);
+fc1_c = FCBlock(...); fc2_c = FCBlock(...);
+t1 = fc1_t(t); c1 = fc1_c(c);
+t2 = fc2_t(t); c2 = fc2_c(c);
+unflatten = c1 * unflatten + t1;
+up1 = c2 * up1 + t2;
+// forward pass continues; for CFG sampling:
+// noise_guided = noise_cond + cfg * (noise_cond - noise_uncond)
+</code></pre>
         <div id="classcond-spec-grid" class="grid"></div>
         <div id="classcond-grid" class="grid"></div>
 
@@ -457,7 +475,7 @@
         <p>
           Same class-conditioned setup but remove the LR decay. Curves and grids
           show how training behaves without the scheduler. To compensate for the
-          lack of scheduler, the learning rate was decreased to 2e-3 to mimic an
+          lack of scheduler, the learning rate was adjusted to 2e-3 to mimic an
           "in the middle" learning rate value that would have been reached had
           the scheduler still been present.
         </p>
@@ -1638,7 +1656,7 @@
       const HYBRIDS = [
         {
           label: "Hybrid images (low/high frequency mix)",
-          note: "Each row pairs a tiny low-freq view + prompt with the full-size high-freq prompt.",
+          note: "Each row pairs a tiny low-freq view + prompt with the full-size high-freq prompt. Every row is the same image, just zoomed out or zoomed in to emphasize the low-frequency or high-frequency components.",
           outputs_rows: [
             pairRow([
               {
