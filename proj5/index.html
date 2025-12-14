@@ -1007,7 +1007,7 @@ up1 = c2 * up1 + t2;
           label: "Iterative denoising (stride=30, start 990 → 0)",
           note: "Intermediate frames every few steps; compare to baselines.",
           inputs_rows: [
-            [
+            pairRow([
               {
                 src: P(
                   "outputs/part_a/q1/q4/iterative_denoised_timestep=990.png",
@@ -1026,8 +1026,8 @@ up1 = c2 * up1 + t2;
                 ),
                 title: "t=690",
               },
-            ],
-            [
+            ]),
+            pairRow([
               {
                 src: P(
                   "outputs/part_a/q1/q4/iterative_denoised_timestep=540.png",
@@ -1046,18 +1046,18 @@ up1 = c2 * up1 + t2;
                 ),
                 title: "t=240",
               },
-            ],
-            [
+            ]),
+            pairRow([
               {
                 src: P(
                   "outputs/part_a/q1/q4/iterative_denoised_timestep=90.png",
                 ),
                 title: "t=90",
               },
-            ],
+            ]),
           ],
           outputs_rows: [
-            [
+            pairRow([
               {
                 src: P("outputs/part_a/q1/q4/final_denoised_iterative.png"),
                 title: "Iterative result",
@@ -1070,7 +1070,7 @@ up1 = c2 * up1 + t2;
                 src: P("outputs/part_a/q1/q4/gaussian_blur.png"),
                 title: "Gaussian baseline",
               },
-            ],
+            ]),
           ],
         },
       ];
